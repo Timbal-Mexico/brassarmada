@@ -9,7 +9,7 @@ const BandGrid = () => {
           Nuestras <span className="text-primary">Bandas</span>
         </h2>
         <p className="mx-auto mb-12 max-w-lg text-center font-body text-sm text-muted-foreground">
-          10 proyectos musicales para cualquier tipo de evento
+          7 proyectos musicales para cualquier tipo de evento
         </p>
 
         {/* Mobile: horizontal scroll */}

@@ -8,15 +8,19 @@ const Hero = () => {
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center border-b border-border px-4 py-20">
       <div className="absolute inset-0 bg-gradient-to-b from-card to-background opacity-50" />
-      <div className="relative z-10 max-w-4xl text-center">
-        <h1 className="mb-6 text-4xl leading-tight md:text-6xl lg:text-7xl">
-          Talento Musical
-          <br />
-          <span className="text-primary">Para Tu Evento</span>
+      <div className="relative z-10 max-w-6xl text-center">
+        <div className="mb-8 flex justify-center">
+          <img 
+            src="/images/logos/brassaarmada.png" 
+            alt="Brass Armada" 
+            className="h-auto w-full max-w-md md:max-w-2xl lg:max-w-3xl" 
+          />
+        </div>
+        <h1 className="mb-6 font-heading text-3xl text-primary md:text-5xl lg:text-6xl tracking-widest drop-shadow-md">
+          PROPUESTAS SONORAS EN CATÁLOGO
         </h1>
-        <p className="mx-auto mb-10 max-w-2xl font-body text-sm text-muted-foreground md:text-base">
-          10 bandas + 60 músicos profesionales listos para transformar tu evento
-          corporativo o privado en una experiencia inolvidable.
+        <p className="mx-auto mb-10 max-w-2xl font-body text-sm text-muted-foreground md:text-base uppercase">
+          Brass Armada es una institución dedicada a crear, estimular y propagar el movimiento del jazz con un enfoque explosivo, audaz y refrescante. Una plataforma de talento, ensamble y producción. La alianza ideal para planners, activaciones de marca, festivales y productoras de eventos.
         </p>
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
           <button
