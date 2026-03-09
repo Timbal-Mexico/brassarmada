@@ -42,8 +42,15 @@ const ContactForm = ({ preselectedBand, onSuccess, variant = "inline" }: Contact
     const utm = getUtmParams();
 
     const leadData: LeadFormData = {
-      ...values,
-      ...utm,
+      eventName: values.eventName,
+      date: values.date,
+      band: values.band,
+      phone: values.phone,
+      budget: values.budget,
+      utm_source: utm.utm_source || "",
+      utm_medium: utm.utm_medium || "",
+      utm_campaign: utm.utm_campaign || "",
+      page_url: utm.page_url || "",
     };
 
     await submitLead(leadData);
