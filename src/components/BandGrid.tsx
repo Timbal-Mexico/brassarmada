@@ -33,19 +33,6 @@ const BandGrid = () => {
                 <span className="mb-2 block font-body text-[10px] font-light tracking-[0.2em] text-black uppercase">{band.genre}</span>
                 <h3 className="font-heading text-xl font-black text-black leading-tight tracking-tight">{band.name}</h3>
                 
-                {band.lineup && (
-                  <div className="mt-4 border-t border-black/10 pt-4">
-                    <p className="mb-2 font-heading text-[9px] font-black tracking-widest text-black">LINE-UP:</p>
-                    <ul className="space-y-1">
-                      {band.lineup.map((member, idx) => (
-                        <li key={idx} className="font-body text-[10px] font-light text-black uppercase opacity-70">
-                          {member}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
                 <div className="mt-6 h-[1px] w-8 bg-black transition-all duration-300 group-hover:w-full" />
                 <span className="mt-4 inline-block font-heading text-[10px] font-black tracking-widest text-black">
                   EXPLORAR →

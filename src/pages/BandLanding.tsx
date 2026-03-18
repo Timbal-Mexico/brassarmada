@@ -5,6 +5,7 @@ import { trackEvent } from "@/lib/analytics";
 import CalendarSection from "@/components/CalendarSection";
 import ContactForm from "@/components/ContactForm";
 import Footer from "@/components/Footer";
+import Navigation from "@/components/Navigation";
 
 const BandLanding = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -45,69 +46,92 @@ const BandLanding = () => {
   const whatsappUrl = `https://wa.me/52${band.phone}?text=${encodeURIComponent(`Hola, me interesa contratar a ${band.name} para un evento. ¿Podrían darme información?`)}`;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
+      <Navigation />
       {/* Nav */}
-      <nav className="border-b border-border px-4 py-4">
+      <nav className="border-b border-black px-4 py-4">
         <div className="container flex items-center justify-between">
-          <Link to="/" className="font-heading text-xs text-primary">← Catálogo</Link>
-          <span className="font-body text-xs text-muted-foreground">{band.genre}</span>
+          <Link to="/" className="font-heading text-[10px] font-black tracking-widest text-black">← PROYECTOS</Link>
+          <span className="font-body text-[10px] font-light tracking-widest text-black uppercase">{band.genre}</span>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="relative border-b border-border">
+      <section className="relative border-b border-black bg-white">
         <div className="aspect-[16/9] max-h-[60vh] w-full overflow-hidden md:aspect-[21/9]">
-          <img src={band.image} alt={band.name} className="h-full w-full object-cover" loading="eager" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+          <img src={band.image} alt={band.name} className="grayscale h-full w-full object-cover" loading="eager" />
+          <div className="absolute inset-0 bg-white/10" />
         </div>
-        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12">
-          <h1 className="text-3xl md:text-5xl lg:text-6xl">{band.name}</h1>
-          <p className="mt-2 max-w-xl font-body text-sm text-muted-foreground md:text-base">{band.tagline}</p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <div className="p-8 md:p-16 text-center">
+          <h1 className="text-4xl md:text-6xl lg:text-8xl font-black tracking-tighter text-black uppercase">{band.name}</h1>
+          <p className="mt-6 mx-auto max-w-2xl font-body text-xs tracking-[0.2em] text-black uppercase font-light leading-relaxed">{band.tagline}</p>
+          
+          {band.lineup && (
+            <div className="mt-12 border-t border-black pt-12">
+              <h3 className="mb-6 font-heading text-[10px] font-black tracking-[0.3em] text-black">INTEGRANTES / LINE-UP</h3>
+              <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
+                {band.lineup.map((member, idx) => (
+                  <span key={idx} className="font-body text-xs tracking-widest text-black uppercase font-light">
+                    {member}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:justify-center">
             <button
               onClick={() => setShowModal(true)}
-              className="touch-target rounded-sm bg-primary px-8 py-4 font-heading text-sm text-primary-foreground transition-opacity hover:opacity-90"
+              className="px-12 py-4 border border-black font-heading text-[10px] font-black tracking-widest text-black hover:bg-black hover:text-white transition-all"
             >
-              Solicitar Fecha
+              SOLICITAR FECHA
             </button>
             <a
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackEvent("whatsapp_click", { band: band.slug })}
-              className="touch-target rounded-sm border border-primary px-8 py-4 text-center font-heading text-sm text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+              className="px-12 py-4 bg-black font-heading text-[10px] font-black tracking-widest text-white hover:opacity-80 transition-all"
             >
-              WhatsApp
+              WHATSAPP
             </a>
           </div>
         </div>
       </section>
 
+      {/* Description */}
+      <section className="border-b border-black px-4 py-20 bg-white">
+        <div className="container max-w-3xl text-center">
+          <p className="font-body text-sm leading-relaxed tracking-widest text-black uppercase font-light">
+            {band.description}
+          </p>
+        </div>
+      </section>
+
       {/* Packages */}
-      <section className="border-b border-border px-4 py-16">
-        <div className="container max-w-3xl">
-          <h2 className="mb-8 text-center text-xl md:text-3xl">
-            <span className="text-primary">Paquetes</span>
+      <section className="border-b border-black px-4 py-20 bg-white">
+        <div className="container max-w-4xl">
+          <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
+            PAQUETES / <span className="font-light italic text-black/40">SERVICIOS</span>
           </h2>
-          <div className="grid gap-px bg-border md:grid-cols-2">
+          <div className="grid gap-8 md:grid-cols-2">
             {band.packages.map((pkg, i) => (
-              <div key={i} className="bg-card p-6">
-                <h3 className="font-heading text-base text-foreground">{pkg.name}</h3>
-                <p className="mb-4 mt-1 font-body text-xs text-muted-foreground">Desde</p>
-                <p className="mb-6 font-heading text-2xl text-primary">{pkg.price}</p>
-                <ul className="space-y-2">
+              <div key={i} className="border border-black p-8 flex flex-col">
+                <h3 className="font-heading text-lg font-black text-black tracking-tight">{pkg.name}</h3>
+                <p className="mt-6 font-heading text-3xl font-black text-black">{pkg.price}</p>
+                <ul className="mt-8 space-y-3 flex-grow">
                   {pkg.features.map((f, j) => (
-                    <li key={j} className="flex items-start gap-2 font-body text-xs text-foreground">
-                      <span className="mt-0.5 text-primary">✓</span>
+                    <li key={j} className="flex items-start gap-3 font-body text-[10px] tracking-widest text-black uppercase font-light">
+                      <span className="font-black">/</span>
                       {f}
                     </li>
                   ))}
                 </ul>
                 <button
                   onClick={() => setShowModal(true)}
-                  className="touch-target mt-6 w-full rounded-sm bg-primary py-3 font-heading text-xs text-primary-foreground transition-opacity hover:opacity-90"
+                  className="mt-10 w-full border border-black py-4 font-heading text-[10px] font-black tracking-widest text-black hover:bg-black hover:text-white transition-all"
                 >
-                  Reservar {pkg.name}
+                  RESERVAR {pkg.name}
                 </button>
               </div>
             ))}
@@ -116,13 +140,13 @@ const BandLanding = () => {
       </section>
 
       {/* Media */}
-      <section className="border-b border-border px-4 py-16">
-        <div className="container max-w-3xl">
-          <h2 className="mb-8 text-center text-xl md:text-3xl">
-            <span className="text-primary">Escúchanos</span>
+      <section className="border-b border-black px-4 py-20 bg-white">
+        <div className="container max-w-5xl">
+          <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
+            MEDIA / <span className="font-light italic text-black/40">SONIDO</span>
           </h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="overflow-hidden border border-border">
+          <div className="grid gap-12 md:grid-cols-2">
+            <div className="border border-black bg-black p-1">
               <iframe
                 src={band.spotifyEmbed}
                 width="100%"
@@ -130,10 +154,10 @@ const BandLanding = () => {
                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                 loading="lazy"
                 title={`${band.name} en Spotify`}
-                className="border-0"
+                className="grayscale"
               />
             </div>
-            <div className="overflow-hidden border border-border">
+            <div className="border border-black bg-black p-1">
               <div className="aspect-video">
                 <iframe
                   src={band.youtubeEmbed}
@@ -143,7 +167,7 @@ const BandLanding = () => {
                   allowFullScreen
                   loading="lazy"
                   title={`${band.name} en YouTube`}
-                  className="border-0"
+                  className="grayscale"
                 />
               </div>
             </div>
@@ -152,79 +176,38 @@ const BandLanding = () => {
       </section>
 
       {/* Setlist */}
-      <section className="border-b border-border px-4 py-16">
-        <div className="container max-w-xl">
-          <h2 className="mb-8 text-center text-xl md:text-3xl">
-            <span className="text-primary">Setlist</span> Ejemplo
+      <section className="border-b border-black px-4 py-20 bg-white">
+        <div className="container max-w-2xl">
+          <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
+            SETLIST / <span className="font-light italic text-black/40">REPERTORIO</span>
           </h2>
-          <ol className="space-y-0 divide-y divide-border border border-border">
+          <div className="border border-black divide-y divide-black">
             {band.setlist.map((song, i) => (
-              <li key={i} className="flex items-center gap-4 bg-card px-4 py-3">
-                <span className="w-6 font-body text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
-                <span className="font-body text-sm text-foreground">{song}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* Rider */}
-      <section className="border-b border-border px-4 py-12">
-        <div className="container max-w-xl text-center">
-          <h2 className="mb-4 text-xl md:text-2xl">Rider <span className="text-primary">Técnico</span></h2>
-          <a
-            href={band.riderPdf}
-            download
-            className="inline-block touch-target rounded-sm border border-border px-8 py-3 font-body text-sm text-foreground transition-colors hover:border-primary hover:text-primary"
-          >
-            📄 Descargar PDF
-          </a>
-        </div>
-      </section>
-
-      {/* Calendar */}
-      <CalendarSection filteredBand={band.slug} />
-
-      {/* Testimonials */}
-      <section className="border-b border-border px-4 py-16">
-        <div className="container max-w-3xl">
-          <h2 className="mb-8 text-center text-xl md:text-3xl">
-            Lo que dicen de <span className="text-primary">{band.name}</span>
-          </h2>
-          <div className="grid gap-px bg-border md:grid-cols-2">
-            {band.testimonials.map((t, i) => (
-              <div key={i} className="bg-card p-6">
-                <p className="mb-4 font-body text-sm leading-relaxed text-foreground">"{t.quote}"</p>
-                <p className="font-heading text-xs text-primary">{t.author}</p>
-                <p className="font-body text-xs text-muted-foreground">{t.venue}</p>
+              <div key={i} className="flex items-center gap-6 px-6 py-4 bg-white">
+                <span className="font-body text-[10px] font-black text-black opacity-20">{String(i + 1).padStart(2, "0")}</span>
+                <span className="font-body text-xs tracking-widest text-black uppercase font-light">{song}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Bottom CTAs */}
-      <section className="border-b border-border px-4 py-16">
-        <div className="container max-w-lg text-center">
-          <h2 className="mb-6 text-xl md:text-3xl">
-            ¿Listo para <span className="text-primary">reservar</span>?
+      <CalendarSection filteredBand={band.slug} />
+
+      {/* Testimonials */}
+      <section className="border-b border-black px-4 py-20 bg-white">
+        <div className="container max-w-4xl">
+          <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
+            RESEÑAS / <span className="font-light italic text-black/40">FEEDBACK</span>
           </h2>
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <button
-              onClick={() => setShowModal(true)}
-              className="touch-target rounded-sm bg-primary px-8 py-4 font-heading text-sm text-primary-foreground transition-opacity hover:opacity-90"
-            >
-              Solicitar Fecha
-            </button>
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackEvent("whatsapp_click", { band: band.slug })}
-              className="touch-target rounded-sm border border-primary px-8 py-4 font-heading text-sm text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
-            >
-              WhatsApp
-            </a>
+          <div className="grid gap-8 md:grid-cols-2">
+            {band.testimonials.map((t, i) => (
+              <div key={i} className="border border-black p-8">
+                <p className="mb-6 font-body text-sm leading-relaxed tracking-widest text-black uppercase font-light">"{t.quote}"</p>
+                <p className="font-heading text-[10px] font-black tracking-widest text-black">{t.author}</p>
+                <p className="font-body text-[9px] tracking-[0.2em] text-black/40 uppercase">{t.venue}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -233,13 +216,13 @@ const BandLanding = () => {
 
       {/* Modal Form */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-card/90 p-4">
-          <div className="w-full max-w-md border border-border bg-background p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-heading text-sm text-primary">Solicitar Fecha — {band.name}</h3>
-              <button onClick={() => setShowModal(false)} className="touch-target font-body text-muted-foreground">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md border border-black bg-white p-8">
+            <div className="mb-8 flex items-center justify-between">
+              <h3 className="font-heading text-[10px] font-black tracking-[0.2em] text-black uppercase">SOLICITAR FECHA / {band.name}</h3>
+              <button onClick="{() => setShowModal(false)}" className="text-black hover:opacity-50 transition-opacity">✕</button>
             </div>
-            <ContactForm preselectedBand={band.slug} onSuccess={() => setTimeout(() => setShowModal(false), 2000)} variant="modal" />
+            <ContactForm preselectedBand={band.slug} onSuccess="{() => setTimeout(() => setShowModal(false), 2000)}" variant="modal" />
           </div>
         </div>
       )}
