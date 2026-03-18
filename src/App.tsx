@@ -7,6 +7,14 @@ import Index from "./pages/Index.tsx";
 import BandLanding from "./pages/BandLanding.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
+// New Pages (Placeholders for now)
+const News = () => <div className="p-20 text-center">NOTICIAS - PRÓXIMAMENTE</div>;
+const Projects = () => <div className="p-20 text-center">PROYECTOS - PRÓXIMAMENTE</div>;
+const Artists = () => <div className="p-20 text-center">ARTISTAS - PRÓXIMAMENTE</div>;
+const Store = () => <div className="p-20 text-center">TIENDA - PRÓXIMAMENTE</div>;
+const Login = () => <div className="p-20 text-center">LOGIN - PRÓXIMAMENTE</div>;
+const Contact = () => <div className="p-20 text-center">CONTACTO - PRÓXIMAMENTE</div>;
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -18,6 +26,12 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/bandas/:slug" element={<BandLanding />} />
+          <Route path="/noticias" element={<News />} />
+          <Route path="/proyectos" element={<Projects />} />
+          <Route path="/artistas" element={<Artists />} />
+          <Route path="/tienda" element={<Store />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/contacto" element={<Contact />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

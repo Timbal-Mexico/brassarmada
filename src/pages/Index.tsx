@@ -1,3 +1,4 @@
+import Navigation from "@/components/Navigation";
 import Hero from "@/components/Hero";
 import BandGrid from "@/components/BandGrid";
 import CalendarSection from "@/components/CalendarSection";
@@ -7,7 +8,8 @@ import StickyMobileForm from "@/components/StickyMobileForm";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-16">
+      <Navigation />
       <Hero />
       <BandGrid />
       <CalendarSection />

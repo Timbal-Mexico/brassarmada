@@ -22,6 +22,7 @@ export interface Band {
     author: string;
     venue: string;
   }[];
+  lineup?: string[];
 }
 
 export const bands: Band[] = [
@@ -45,6 +46,7 @@ export const bands: Band[] = [
     testimonials: [
       { quote: "Un espectáculo de clase mundial.", author: "Festival de Jazz", venue: "Riviera Maya" },
     ],
+    lineup: ["Arturo de la Torre (Trompeta / Dirección)"]
   },
   {
     id: "2",
@@ -64,6 +66,7 @@ export const bands: Band[] = [
     ],
     setlist: ["In The Mood", "Sing Sing Sing", "New York, New York"],
     testimonials: [],
+    lineup: ["Arturo de la Torre (Director)", "Sección de Metales", "Sección de Maderas", "Sección Rítmica"]
   },
   {
     id: "3",
@@ -81,6 +84,7 @@ export const bands: Band[] = [
     packages: [],
     setlist: [],
     testimonials: [],
+    lineup: ["Integrante 1", "Integrante 2", "Integrante 3", "Integrante 4"]
   },
   {
     id: "4",
@@ -98,6 +102,7 @@ export const bands: Band[] = [
     packages: [],
     setlist: [],
     testimonials: [],
+    lineup: ["Integrante 1", "Integrante 2", "Integrante 3", "Integrante 4", "Integrante 5"]
   },
   {
     id: "5",
@@ -115,6 +120,7 @@ export const bands: Band[] = [
     packages: [],
     setlist: [],
     testimonials: [],
+    lineup: ["Integrante 1", "Integrante 2", "Integrante 3", "Integrante 4", "Integrante 5", "Integrante 6"]
   },
   {
     id: "6",
@@ -132,6 +138,7 @@ export const bands: Band[] = [
     packages: [],
     setlist: [],
     testimonials: [],
+    lineup: ["Ana de Armas (Voz)", "Piano", "Contrabajo"]
   },
   {
     id: "7",
@@ -149,6 +156,7 @@ export const bands: Band[] = [
     packages: [],
     setlist: [],
     testimonials: [],
+    lineup: ["Integrante 1", "Integrante 2", "Integrante 3", "Integrante 4"]
   },
 ];
 
