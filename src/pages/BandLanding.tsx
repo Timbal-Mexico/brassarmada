@@ -18,7 +18,6 @@ const BandLanding = () => {
       setBand(found);
       if (found) {
         trackEvent("band_page_view", { band: found.slug, name: found.name });
-        // Update OG tags dynamically
         document.title = `${found.name} — Booking Talento Musical`;
         const metaDesc = document.querySelector('meta[name="description"]');
         if (metaDesc) metaDesc.setAttribute("content", found.description);
@@ -48,7 +47,6 @@ const BandLanding = () => {
   return (
     <div className="min-h-screen bg-background pt-16">
       <Navigation />
-      {/* Nav */}
       <nav className="border-b border-black px-4 py-4">
         <div className="container flex items-center justify-between">
           <Link to="/" className="font-heading text-[10px] font-black tracking-widest text-black">← PROYECTOS</Link>
@@ -56,7 +54,6 @@ const BandLanding = () => {
         </div>
       </nav>
 
-      {/* Hero */}
       <section className="relative border-b border-black bg-white">
         <div className="aspect-[16/9] max-h-[60vh] w-full overflow-hidden md:aspect-[21/9]">
           <img src={band.image} alt={band.name} className="grayscale h-full w-full object-cover" loading="eager" />
@@ -99,7 +96,6 @@ const BandLanding = () => {
         </div>
       </section>
 
-      {/* Description */}
       <section className="border-b border-black px-4 py-20 bg-white">
         <div className="container max-w-3xl text-center">
           <p className="font-body text-sm leading-relaxed tracking-widest text-black uppercase font-light">
@@ -108,7 +104,6 @@ const BandLanding = () => {
         </div>
       </section>
 
-      {/* Packages */}
       <section className="border-b border-black px-4 py-20 bg-white">
         <div className="container max-w-4xl">
           <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
@@ -139,7 +134,6 @@ const BandLanding = () => {
         </div>
       </section>
 
-      {/* Media */}
       <section className="border-b border-black px-4 py-20 bg-white">
         <div className="container max-w-5xl">
           <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
@@ -175,7 +169,6 @@ const BandLanding = () => {
         </div>
       </section>
 
-      {/* Setlist */}
       <section className="border-b border-black px-4 py-20 bg-white">
         <div className="container max-w-2xl">
           <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
@@ -194,7 +187,6 @@ const BandLanding = () => {
 
       <CalendarSection filteredBand={band.slug} />
 
-      {/* Testimonials */}
       <section className="border-b border-black px-4 py-20 bg-white">
         <div className="container max-w-4xl">
           <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
@@ -214,15 +206,14 @@ const BandLanding = () => {
 
       <Footer />
 
-      {/* Modal Form */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm p-4">
           <div className="w-full max-w-md border border-black bg-white p-8">
             <div className="mb-8 flex items-center justify-between">
               <h3 className="font-heading text-[10px] font-black tracking-[0.2em] text-black uppercase">SOLICITAR FECHA / {band.name}</h3>
-              <button onClick="{() => setShowModal(false)}" className="text-black hover:opacity-50 transition-opacity">✕</button>
+              <button onClick={() => setShowModal(false)} className="text-black hover:opacity-50 transition-opacity">✕</button>
             </div>
-            <ContactForm preselectedBand={band.slug} onSuccess="{() => setTimeout(() => setShowModal(false), 2000)}" variant="modal" />
+            <ContactForm preselectedBand={band.slug} onSuccess={() => setTimeout(() => setShowModal(false), 2000)} variant="modal" />
           </div>
         </div>
       )}

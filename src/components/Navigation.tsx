@@ -1,44 +1,120 @@
 import { Link } from "react-router-dom";
-import { Search } from "lucide-react";
+import { useState } from "react";
+import { Search, User } from "lucide-react";
+import { bands } from "@/data/bands";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navigation = () => {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+
   return (
     <nav className="fixed left-0 right-0 top-0 z-50 border-b border-black bg-white">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* Left: Search */}
-        <div className="flex flex-1 items-center">
-          <button className="flex items-center gap-2 text-[10px] font-heading tracking-[0.2em] text-black transition-opacity hover:opacity-60">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4">
+        <Link to="/" className="flex items-center">
+          <img
+            src="/images/logos/brassaarmada.png"
+            alt="Brass Armada"
+            className="h-auto max-h-[50px] w-auto max-w-[150px] object-contain brightness-0"
+          />
+        </Link>
+
+        <div className="flex flex-1 items-center justify-center px-2">
+          <div className="flex max-w-full items-center gap-5 overflow-x-auto whitespace-nowrap py-1 md:gap-8">
+            <Link
+              to="/"
+              className="text-[10px] font-heading font-black tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+            >
+              INICIO
+            </Link>
+            <Link
+              to="/noticias"
+              className="text-[10px] font-body font-light tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+            >
+              NOTICIAS
+            </Link>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="text-[10px] font-heading font-black tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+                >
+                  PROYECTOS
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="center"
+                sideOffset={12}
+                className="max-h-[70vh] w-72 overflow-y-auto rounded-none border border-black bg-white p-2 text-black shadow-none"
+              >
+                {bands.map((band) => (
+                  <DropdownMenuItem
+                    key={band.id}
+                    asChild
+                    className="rounded-none px-3 py-2 font-body text-[10px] font-light tracking-[0.2em] text-black uppercase focus:bg-black focus:text-white"
+                  >
+                    <Link to={`/bandas/${band.slug}`}>{band.name}</Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Link
+              to="/artistas"
+              className="text-[10px] font-body font-light tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+            >
+              ARTISTAS
+            </Link>
+            <Link
+              to="/tienda"
+              className="text-[10px] font-body font-light tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+            >
+              TIENDA
+            </Link>
+            <Link
+              to="/contacto"
+              className="text-[10px] font-heading font-black tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+            >
+              CONTACTO
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div
+            className={`overflow-hidden transition-all duration-300 ${
+              isSearchOpen ? "w-40 md:w-56" : "w-0"
+            }`}
+          >
+            <input
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              placeholder="BUSCAR"
+              aria-label="Buscar"
+              className="h-9 w-full rounded-none border border-black bg-white px-3 font-body text-[10px] tracking-[0.2em] text-black placeholder:text-black/40 focus:outline-none"
+              autoFocus={isSearchOpen}
+            />
+          </div>
+          <button
+            type="button"
+            aria-label="Abrir búsqueda"
+            onClick={() => setIsSearchOpen((v) => !v)}
+            className="flex h-9 w-9 items-center justify-center border border-black text-black transition-opacity hover:opacity-60"
+          >
             <Search className="h-4 w-4" strokeWidth={3} />
-            <span className="hidden md:inline">BUSCAR</span>
           </button>
-        </div>
-
-        {/* Center: Links */}
-        <div className="flex flex-[2] items-center justify-center gap-4 md:gap-8">
-          <Link to="/" className="text-[10px] font-heading font-black tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs">
-            INICIO
-          </Link>
-          <Link to="/noticias" className="text-[10px] font-body font-normal tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs">
-            NOTICIAS
-          </Link>
-          <Link to="/proyectos" className="text-[10px] font-body font-normal tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs">
-            PROYECTOS
-          </Link>
-          <Link to="/artistas" className="text-[10px] font-heading font-black tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs">
-            ARTISTAS
-          </Link>
-          <Link to="/tienda" className="text-[10px] font-body font-normal tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs">
-            TIENDA
-          </Link>
-        </div>
-
-        {/* Right: Auth & Contact */}
-        <div className="flex flex-1 items-center justify-end gap-4">
-          <Link to="/login" className="text-[10px] font-body font-normal tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs">
-            LOGIN
-          </Link>
-          <Link to="/contacto" className="text-[10px] font-heading font-black tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs">
-            CONTACTO
+          <Link
+            to="/login"
+            aria-label="Login"
+            className="flex h-9 w-9 items-center justify-center border border-black text-black transition-opacity hover:opacity-60"
+          >
+            <User className="h-4 w-4" strokeWidth={3} />
           </Link>
         </div>
       </div>
