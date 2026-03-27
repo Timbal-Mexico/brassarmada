@@ -64,9 +64,6 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@brassarmada/ui": "workspace:*",
-    "@brassarmada/supabase": "workspace:*",
-    "@brassarmada/types": "workspace:*",
     "@eslint/js": "^9.32.0",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/typography": "^0.5.16",
