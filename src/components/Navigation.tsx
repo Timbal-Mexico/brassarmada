@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { Search, User } from "lucide-react";
+import { ChevronDown, Search, User } from "lucide-react";
 import { bands } from "@/data/bands";
 import {
   DropdownMenu,
@@ -12,6 +12,9 @@ import {
 const Navigation = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+
+  const navLinkClass =
+    "text-[10px] font-body font-light tracking-[0.2em] text-black transition-opacity hover:opacity-60 visited:font-black md:text-xs";
 
   return (
     <nav className="fixed left-0 right-0 top-0 z-50 border-b border-black bg-white">
@@ -25,29 +28,35 @@ const Navigation = () => {
         </Link>
 
         <div className="flex flex-1 items-center justify-center px-2">
-          <div className="flex max-w-full items-center gap-5 overflow-x-auto whitespace-nowrap py-1 md:gap-8">
+          <div className="flex max-w-full flex-wrap items-center justify-center gap-4 py-1 md:gap-8">
             <Link
               to="/"
-              className="text-[10px] font-heading font-black tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+              className={navLinkClass}
             >
               INICIO
             </Link>
             <Link
               to="/noticias"
-              className="text-[10px] font-body font-light tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+              className={navLinkClass}
             >
               NOTICIAS
             </Link>
 
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="text-[10px] font-heading font-black tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
-                >
+              <div className="flex items-center gap-2">
+                <Link to="/proyectos" className={navLinkClass}>
                   PROYECTOS
-                </button>
-              </DropdownMenuTrigger>
+                </Link>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Abrir proyectos"
+                    className="flex h-7 w-7 items-center justify-center border border-black text-black transition-opacity hover:opacity-60"
+                  >
+                    <ChevronDown className="h-4 w-4" strokeWidth={3} />
+                  </button>
+                </DropdownMenuTrigger>
+              </div>
               <DropdownMenuContent
                 align="center"
                 sideOffset={12}
@@ -67,19 +76,19 @@ const Navigation = () => {
 
             <Link
               to="/artistas"
-              className="text-[10px] font-body font-light tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+              className={navLinkClass}
             >
               ARTISTAS
             </Link>
             <Link
               to="/tienda"
-              className="text-[10px] font-body font-light tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+              className={navLinkClass}
             >
               TIENDA
             </Link>
             <Link
               to="/contacto"
-              className="text-[10px] font-heading font-black tracking-[0.2em] text-black transition-opacity hover:opacity-60 md:text-xs"
+              className={navLinkClass}
             >
               CONTACTO
             </Link>
@@ -109,13 +118,13 @@ const Navigation = () => {
           >
             <Search className="h-4 w-4" strokeWidth={3} />
           </button>
-          <Link
-            to="/login"
+          <a
+            href="https://brassaarmada-admin.vercel.app/"
             aria-label="Login"
             className="flex h-9 w-9 items-center justify-center border border-black text-black transition-opacity hover:opacity-60"
           >
             <User className="h-4 w-4" strokeWidth={3} />
-          </Link>
+          </a>
         </div>
       </div>
     </nav>

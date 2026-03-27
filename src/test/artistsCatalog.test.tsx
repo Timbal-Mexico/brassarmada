@@ -18,7 +18,7 @@ describe("Artists catalog", () => {
     const search = screen.getByLabelText("Buscar artistas");
     fireEvent.change(search, { target: { value: "ANA" } });
 
-    expect(await screen.findByText("ANA DE ARMAS")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "ANA DE ARMAS" })).toBeInTheDocument();
   });
 
   it("search matches band name and genre", async () => {
@@ -30,10 +30,10 @@ describe("Artists catalog", () => {
 
     const search = screen.getByLabelText("Buscar artistas");
     fireEvent.change(search, { target: { value: "CONZATTI" } });
-    expect(await screen.findByText("SOFÍA RIVERA")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "SOFÍA RIVERA" })).toBeInTheDocument();
 
     fireEvent.change(search, { target: { value: "FUSIÓN" } });
-    expect(await screen.findByText("DIEGO LUNA")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "DIEGO LUNA" })).toBeInTheDocument();
   });
 
   it("applies cumulative band filters and keeps them when switching views", async () => {

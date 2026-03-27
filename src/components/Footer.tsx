@@ -1,21 +1,58 @@
+import { Mail, MessageCircle, Phone } from "lucide-react";
+
 const Footer = () => {
   return (
     <footer className="border-t border-black bg-white px-4 py-16">
       <div className="container">
         <div className="grid gap-12 md:grid-cols-4">
           <div className="col-span-1 md:col-span-2">
-            <h3 className="mb-6 font-heading text-xl font-black text-black tracking-tighter">BRASS ARMADA</h3>
+            <div className="mb-6 flex items-center">
+              <img
+                src="/images/logos/brassaarmada.png"
+                alt="Brass Armada"
+                className="h-auto max-h-[50px] w-auto max-w-[150px] object-contain brightness-0"
+                loading="lazy"
+              />
+            </div>
             <p className="max-w-md font-body text-xs leading-relaxed tracking-widest text-black uppercase opacity-60">
-              Una institución dedicada a crear, estimular y propagar el movimiento del jazz con un enfoque explosivo, audaz y refrescante.
+              Casa productora y record label enfocada en crear, desarrollar y presentar proyectos musicales con identidad propia y estándares
+              de producción de alto nivel.
             </p>
           </div>
           <div>
             <h4 className="mb-6 font-heading text-[10px] font-black tracking-[0.2em] text-black">CONTACTO</h4>
-            <ul className="space-y-4 font-body text-xs tracking-widest text-black uppercase">
-              <li className="font-light">brassarmada@gmail.com</li>
-              <li className="font-light">(+52) 3334669630</li>
-              <li className="font-light">CDMX, MÉXICO</li>
-            </ul>
+            <address className="not-italic">
+              <ul className="space-y-4 font-body text-xs tracking-widest text-black uppercase">
+                <li className="font-light">
+                  <a
+                    href="mailto:info@brassarmada.com.mx"
+                    className="inline-flex items-center gap-3 hover:opacity-60 transition-opacity"
+                  >
+                    <Mail className="h-4 w-4" strokeWidth={3} />
+                    info@brassarmada.com.mx
+                  </a>
+                </li>
+                <li className="font-light">
+                  <a href="tel:+523328110531" className="inline-flex items-center gap-3 hover:opacity-60 transition-opacity">
+                    <Phone className="h-4 w-4" strokeWidth={3} />
+                    3328110531
+                  </a>
+                </li>
+                <li className="font-light">
+                  <a
+                    href="https://wa.me/523328110531"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-3 hover:opacity-60 transition-opacity"
+                    aria-label="WhatsApp Brass Armada"
+                  >
+                    <MessageCircle className="h-4 w-4" strokeWidth={3} />
+                    WHATSAPP
+                  </a>
+                </li>
+                <li className="font-light">GUADALAJARA, JALISCO</li>
+              </ul>
+            </address>
           </div>
           <div>
             <h4 className="mb-6 font-heading text-[10px] font-black tracking-[0.2em] text-black">REDES</h4>

@@ -6,7 +6,7 @@ import ContactForm from "@/components/ContactForm";
 import { bands } from "@/data/bands";
 import { getArtistBySlug } from "@/data/artists";
 import type { Artist } from "@/data/artists";
-import AvailabilityCalendar from "@/pages/artists/AvailabilityCalendar";
+import { Guitar, Drum, Mic2, Music } from "lucide-react";
 
 const levelLabel = (level: 1 | 2 | 3 | 4 | 5) => {
   if (level === 1) return "BÁSICO";
@@ -102,6 +102,27 @@ const ArtistsProfile = () => {
         : "bg-white text-black";
 
   const statusLabel = artist.availabilityStatus.toUpperCase();
+
+  const youtubeId = (url: string) => {
+    const patterns = [
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const re of patterns) {
+      const m = url.match(re);
+      if (m?.[1]) return m[1];
+    }
+    return "";
+  };
+
+  const iconForInstrument = (name: string) => {
+    const n = name.toUpperCase();
+    if (n.includes("VOZ")) return <Mic2 className="h-5 w-5" strokeWidth={3} />;
+    if (n.includes("GUITARRA")) return <Guitar className="h-5 w-5" strokeWidth={3} />;
+    if (n.includes("BATER") || n.includes("DRUM")) return <Drum className="h-5 w-5" strokeWidth={3} />;
+    return <Music className="h-5 w-5" strokeWidth={3} />;
+  };
 
   return (
     <div className="min-h-screen bg-background pt-16">
@@ -244,16 +265,11 @@ const ArtistsProfile = () => {
                   </div>
                   <div className="mt-6 grid gap-4 sm:grid-cols-2">
                     {artist.instruments.map((inst) => (
-                      <div key={inst.name} className="border border-black p-6">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="font-heading text-xs font-black tracking-[0.2em] text-black uppercase">{inst.name}</div>
-                          <div className="font-body text-[9px] font-black tracking-[0.2em] text-black opacity-60">
-                            {levelLabel(inst.level)}
-                          </div>
+                      <div key={inst.name} className="flex items-center gap-3 border border-black p-6">
+                        <div className="flex h-9 w-9 items-center justify-center border border-black bg-white text-black">
+                          {iconForInstrument(inst.name)}
                         </div>
-                        <div className="mt-4 h-2 w-full border border-black">
-                          <div className="h-full bg-black" style={{ width: `${(inst.level / 5) * 100}%` }} />
-                        </div>
+                        <div className="font-heading text-xs font-black tracking-[0.2em] text-black uppercase">{inst.name}</div>
                       </div>
                     ))}
                   </div>
@@ -273,10 +289,32 @@ const ArtistsProfile = () => {
                     </div>
                   </div>
                 ) : null}
-              </div>
-
-              <div className="mt-10">
-                <AvailabilityCalendar items={artist.availability} availableBandSlugs={bandOptions} />
+                {artist.jams?.length ? (
+                  <div className="mt-10 border-t border-black pt-10">
+                    <div className="font-heading text-[10px] font-black tracking-[0.3em] text-black uppercase">MIS JAMS</div>
+                    <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                      {artist.jams
+                        .map((url) => youtubeId(url))
+                        .filter((id) => !!id)
+                        .map((id) => (
+                          <div key={id} className="border border-black bg-black p-1">
+                            <div className="aspect-video">
+                              <iframe
+                                src={`https://www.youtube.com/embed/${id}`}
+                                width="100%"
+                                height="100%"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                loading="lazy"
+                                title={`${artist.name} jam`}
+                                className="grayscale"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

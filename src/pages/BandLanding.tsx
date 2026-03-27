@@ -2,15 +2,22 @@ import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getBandBySlug, type Band } from "@/data/bands";
 import { trackEvent } from "@/lib/analytics";
-import CalendarSection from "@/components/CalendarSection";
 import ContactForm from "@/components/ContactForm";
 import Footer from "@/components/Footer";
 import Navigation from "@/components/Navigation";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const BandLanding = () => {
   const { slug } = useParams<{ slug: string }>();
   const [band, setBand] = useState<Band | undefined>();
   const [showModal, setShowModal] = useState(false);
+  const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({ open: false, index: 0 });
 
   useEffect(() => {
     if (slug) {
@@ -31,6 +38,25 @@ const BandLanding = () => {
     }
   }, [slug]);
 
+  const venueItems = band?.venuesGallery ?? [];
+
+  useEffect(() => {
+    if (!lightbox.open || !venueItems.length) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setLightbox((s) => ({ ...s, open: false }));
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        setLightbox((s) => ({ ...s, index: (s.index - 1 + venueItems.length) % venueItems.length }));
+      } else if (e.key === "ArrowRight") {
+        setLightbox((s) => ({ ...s, index: (s.index + 1) % venueItems.length }));
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [lightbox.open, venueItems.length]);
+
   if (!band) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -49,7 +75,7 @@ const BandLanding = () => {
       <Navigation />
       <nav className="border-b border-black px-4 py-4">
         <div className="container flex items-center justify-between">
-          <Link to="/" className="font-heading text-[10px] font-black tracking-widest text-black">← PROYECTOS</Link>
+          <Link to="/proyectos" className="font-heading text-[10px] font-black tracking-widest text-black">← PROYECTOS</Link>
           <span className="font-body text-[10px] font-light tracking-widest text-black uppercase">{band.genre}</span>
         </div>
       </nav>
@@ -96,6 +122,41 @@ const BandLanding = () => {
         </div>
       </section>
 
+      {band.gallery?.length ? (
+        <section className="border-b border-black bg-white py-16">
+          <div className="mx-auto w-full max-w-[1440px] px-4">
+            <div className="mb-8 text-center">
+              <h2 className="text-2xl font-black tracking-tighter md:text-5xl uppercase text-black">
+                GALERÍA / <span className="font-light italic text-black/40">SHOW</span>
+              </h2>
+            </div>
+
+            <Carousel opts={{ loop: true }} className="w-full">
+              <CarouselContent className="-ml-0">
+                {band.gallery.map((src) => (
+                  <CarouselItem key={src} className="pl-0">
+                    <div className="border border-black bg-black p-1">
+                      <div className="aspect-[21/9] w-full overflow-hidden">
+                        <img
+                          src={src}
+                          alt={`${band.name} galería`}
+                          loading="lazy"
+                          className="h-full w-full object-cover grayscale"
+                        />
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious
+                className="rounded-none border-black bg-white text-black hover:bg-black hover:text-white"
+              />
+              <CarouselNext className="rounded-none border-black bg-white text-black hover:bg-black hover:text-white" />
+            </Carousel>
+          </div>
+        </section>
+      ) : null}
+
       <section className="border-b border-black px-4 py-20 bg-white">
         <div className="container max-w-3xl text-center">
           <p className="font-body text-sm leading-relaxed tracking-widest text-black uppercase font-light">
@@ -104,53 +165,88 @@ const BandLanding = () => {
         </div>
       </section>
 
-      <section className="border-b border-black px-4 py-20 bg-white">
-        <div className="container max-w-4xl">
-          <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
-            PAQUETES / <span className="font-light italic text-black/40">SERVICIOS</span>
-          </h2>
-          <div className="grid gap-8 md:grid-cols-2">
-            {band.packages.map((pkg, i) => (
-              <div key={i} className="border border-black p-8 flex flex-col">
-                <h3 className="font-heading text-lg font-black text-black tracking-tight">{pkg.name}</h3>
-                <p className="mt-6 font-heading text-3xl font-black text-black">{pkg.price}</p>
-                <ul className="mt-8 space-y-3 flex-grow">
-                  {pkg.features.map((f, j) => (
-                    <li key={j} className="flex items-start gap-3 font-body text-[10px] tracking-widest text-black uppercase font-light">
-                      <span className="font-black">/</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="mt-10 w-full border border-black py-4 font-heading text-[10px] font-black tracking-widest text-black hover:bg-black hover:text-white transition-all"
-                >
-                  RESERVAR {pkg.name}
-                </button>
-              </div>
-            ))}
+      {band.venuesGallery?.length ? (
+        <section className="border-b border-black bg-white py-16">
+          <div className="mx-auto w-full max-w-[1440px] px-4">
+            <div className="mb-8 text-center">
+              <h2 className="text-2xl font-black tracking-tighter md:text-5xl uppercase text-black">
+                LUGARES / <span className="font-light italic text-black/40">DONDE TOCARON</span>
+              </h2>
+            </div>
+
+            <Carousel opts={{ loop: true }} className="w-full">
+              <CarouselContent>
+                {band.venuesGallery.map((v) => (
+                  <CarouselItem key={`${v.name}-${v.image}`} className="md:basis-1/2 lg:basis-1/3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const idx = venueItems.findIndex((it) => it.image === v.image);
+                        setLightbox({ open: true, index: idx >= 0 ? idx : 0 });
+                      }}
+                      aria-label={`Abrir imagen de ${v.name}`}
+                      className="group block w-full border border-black bg-black p-1 text-left"
+                    >
+                      <div className="relative aspect-[16/9] w-full overflow-hidden">
+                        <img
+                          src={v.image}
+                          alt={v.name}
+                          loading="lazy"
+                          className="h-full w-full object-cover grayscale transition-transform duration-700 group-hover:scale-105"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 border-t border-black bg-white/95 p-4">
+                          <div className="font-heading text-[10px] font-black tracking-[0.3em] text-black uppercase">
+                            {v.name}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious
+                className="rounded-none border-black bg-white text-black hover:bg-black hover:text-white"
+              />
+              <CarouselNext className="rounded-none border-black bg-white text-black hover:bg-black hover:text-white" />
+            </Carousel>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <section className="border-b border-black px-4 py-20 bg-white">
         <div className="container max-w-5xl">
           <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
             MEDIA / <span className="font-light italic text-black/40">SONIDO</span>
           </h2>
-          <div className="grid gap-12 md:grid-cols-2">
-            <div className="border border-black bg-black p-1">
-              <iframe
-                src={band.spotifyEmbed}
-                width="100%"
-                height="352"
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                loading="lazy"
-                title={`${band.name} en Spotify`}
-                className="grayscale"
-              />
+          {band.spotifyEmbed && band.youtubeEmbed ? (
+            <div className="grid gap-12 md:grid-cols-2">
+              <div className="border border-black bg-black p-1">
+                <iframe
+                  src={band.spotifyEmbed}
+                  width="100%"
+                  height="352"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="lazy"
+                  title={`${band.name} en Spotify`}
+                  className="grayscale"
+                />
+              </div>
+              <div className="border border-black bg-black p-1">
+                <div className="aspect-video">
+                  <iframe
+                    src={band.youtubeEmbed}
+                    width="100%"
+                    height="100%"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    loading="lazy"
+                    title={`${band.name} en YouTube`}
+                    className="grayscale"
+                  />
+                </div>
+              </div>
             </div>
+          ) : band.youtubeEmbed ? (
             <div className="border border-black bg-black p-1">
               <div className="aspect-video">
                 <iframe
@@ -165,46 +261,113 @@ const BandLanding = () => {
                 />
               </div>
             </div>
-          </div>
+          ) : band.spotifyEmbed ? (
+            <div className="border border-black bg-black p-1">
+              <iframe
+                src={band.spotifyEmbed}
+                width="100%"
+                height="352"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+                title={`${band.name} en Spotify`}
+                className="grayscale"
+              />
+            </div>
+          ) : null}
         </div>
       </section>
-
-      <section className="border-b border-black px-4 py-20 bg-white">
-        <div className="container max-w-2xl">
-          <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
-            SETLIST / <span className="font-light italic text-black/40">REPERTORIO</span>
-          </h2>
-          <div className="border border-black divide-y divide-black">
-            {band.setlist.map((song, i) => (
-              <div key={i} className="flex items-center gap-6 px-6 py-4 bg-white">
-                <span className="font-body text-[10px] font-black text-black opacity-20">{String(i + 1).padStart(2, "0")}</span>
-                <span className="font-body text-xs tracking-widest text-black uppercase font-light">{song}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <CalendarSection filteredBand={band.slug} />
 
       <section className="border-b border-black px-4 py-20 bg-white">
         <div className="container max-w-4xl">
           <h2 className="mb-12 text-center text-2xl font-black tracking-tighter md:text-5xl uppercase">
             RESEÑAS / <span className="font-light italic text-black/40">FEEDBACK</span>
           </h2>
-          <div className="grid gap-8 md:grid-cols-2">
-            {band.testimonials.map((t, i) => (
-              <div key={i} className="border border-black p-8">
-                <p className="mb-6 font-body text-sm leading-relaxed tracking-widest text-black uppercase font-light">"{t.quote}"</p>
-                <p className="font-heading text-[10px] font-black tracking-widest text-black">{t.author}</p>
-                <p className="font-body text-[9px] tracking-[0.2em] text-black/40 uppercase">{t.venue}</p>
-              </div>
-            ))}
-          </div>
+          {band.testimonials.length ? (
+            <Carousel opts={{ loop: true }} className="w-full">
+              <CarouselContent>
+                {band.testimonials.map((t, i) => (
+                  <CarouselItem key={i} className="md:basis-1/2 lg:basis-1/3">
+                    <div className="border border-black bg-white p-8 h-full">
+                      <p className="mb-6 font-body text-sm leading-relaxed tracking-widest text-black uppercase font-light">
+                        "{t.quote}"
+                      </p>
+                      <p className="font-heading text-[10px] font-black tracking-widest text-black">{t.author}</p>
+                      <p className="font-body text-[9px] tracking-[0.2em] text-black/40 uppercase">{t.venue}</p>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="rounded-none border-black bg-white text-black hover:bg-black hover:text-white" />
+              <CarouselNext className="rounded-none border-black bg-white text-black hover:bg-black hover:text-white" />
+            </Carousel>
+          ) : (
+            <div className="border border-black bg-white p-8 text-center font-body text-[10px] tracking-[0.2em] text-black uppercase opacity-60">
+              Sin reseñas por ahora
+            </div>
+          )}
         </div>
       </section>
 
       <Footer />
+
+      {lightbox.open && venueItems.length ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Vista previa de lugar"
+          onClick={() => setLightbox((s) => ({ ...s, open: false }))}
+        >
+          <div className="mx-auto flex h-full w-full max-w-6xl flex-col justify-center" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="font-heading text-[10px] font-black tracking-[0.3em] text-white uppercase">
+                {venueItems[lightbox.index]?.name}
+              </div>
+              <button
+                type="button"
+                onClick={() => setLightbox((s) => ({ ...s, open: false }))}
+                className="h-10 border border-white bg-transparent px-4 font-heading text-[10px] font-black tracking-[0.2em] text-white hover:bg-white hover:text-black transition-colors"
+              >
+                CERRAR
+              </button>
+            </div>
+
+            <div className="relative border border-white bg-black p-1">
+              <img
+                src={venueItems[lightbox.index]?.image}
+                alt={venueItems[lightbox.index]?.name}
+                className="max-h-[75vh] w-full object-contain"
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 border-t border-white/30 bg-black/40 p-4">
+                <div className="font-body text-[10px] font-light tracking-[0.3em] text-white uppercase opacity-90">
+                  {lightbox.index + 1} / {venueItems.length}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setLightbox((s) => ({ ...s, index: (s.index - 1 + venueItems.length) % venueItems.length }))
+                }
+                className="h-10 border border-white bg-transparent px-4 font-heading text-[10px] font-black tracking-[0.2em] text-white hover:bg-white hover:text-black transition-colors"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setLightbox((s) => ({ ...s, index: (s.index + 1) % venueItems.length }))
+                }
+                className="h-10 border border-white bg-transparent px-4 font-heading text-[10px] font-black tracking-[0.2em] text-white hover:bg-white hover:text-black transition-colors"
+              >
+                →
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm p-4">

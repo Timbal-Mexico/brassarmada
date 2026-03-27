@@ -6,6 +6,7 @@ import { bands } from "@/data/bands";
 import { Calendar } from "@/components/ui/calendar";
 import { getArtistBySlug, saveArtistOverride } from "@/data/artists";
 import type { Artist } from "@/data/artists";
+import { AlertCircle } from "lucide-react";
 
 const isoFromDate = (date: Date) => {
   const y = date.getFullYear();
@@ -121,6 +122,19 @@ const ArtistAdmin = () => {
       </div>
     );
   }
+
+  const youtubeId = (url: string) => {
+    const patterns = [
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const re of patterns) {
+      const m = url.match(re);
+      if (m?.[1]) return m[1];
+    }
+    return "";
+  };
 
   return (
     <div className="min-h-screen bg-background pt-16">
@@ -377,6 +391,78 @@ const ArtistAdmin = () => {
                     className="h-11 border border-black bg-white px-4 font-heading text-[10px] font-black tracking-[0.2em] text-black hover:bg-black hover:text-white transition-colors"
                   >
                     AGREGAR FOTO/VIDEO
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-8 border border-black p-8">
+                <div className="font-heading text-[10px] font-black tracking-[0.3em] text-black uppercase">MIS JAMS (YouTube)</div>
+                <div className="mt-2 flex items-center gap-2 text-black">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="font-body text-[10px] tracking-[0.2em] uppercase opacity-60">
+                    Pega la URL de YouTube (watch, youtu.be o embed). Se valida y se muestra previsualización.
+                  </span>
+                </div>
+                <div className="mt-6 grid gap-4">
+                  {(draft.jams ?? []).map((url, idx) => {
+                    const id = youtubeId(url);
+                    const isValid = !!id;
+                    return (
+                      <div key={`${url}-${idx}`} className="grid gap-4 md:grid-cols-2">
+                        <input
+                          value={url}
+                          onChange={(e) => {
+                            setSaved(false);
+                            const next = [...(draft.jams ?? [])];
+                            next[idx] = e.target.value;
+                            update({ jams: next });
+                          }}
+                          className={`h-11 w-full border px-3 font-body text-[10px] tracking-[0.2em] ${isValid ? "border-black bg-white text-black" : "border-red-600 bg-white text-black"}`}
+                          aria-label={`Jam ${idx + 1}`}
+                          placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX"
+                        />
+                        <div className="border border-black bg-black p-1">
+                          {isValid ? (
+                            <div className="aspect-video">
+                              <iframe
+                                src={`https://www.youtube.com/embed/${id}`}
+                                width="100%"
+                                height="100%"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                loading="lazy"
+                                title={`Jam ${idx + 1}`}
+                                className="grayscale"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex aspect-video items-center justify-center bg-white font-body text-[10px] tracking-[0.2em] text-black">
+                              URL inválida
+                            </div>
+                          )}
+                        </div>
+                        <div className="md:col-span-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSaved(false);
+                              const next = (draft.jams ?? []).filter((_, i) => i !== idx);
+                              update({ jams: next });
+                            }}
+                            className="h-10 border border-black bg-white px-3 font-heading text-[10px] font-black tracking-[0.2em] text-black hover:bg-black hover:text-white transition-colors"
+                          >
+                            ELIMINAR
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => update({ jams: [...(draft.jams ?? []), "https://www.youtube.com/watch?v="] })}
+                    className="h-11 border border-black bg-white px-4 font-heading text-[10px] font-black tracking-[0.2em] text-black hover:bg-black hover:text-white transition-colors"
+                  >
+                    AGREGAR JAM
                   </button>
                 </div>
               </div>

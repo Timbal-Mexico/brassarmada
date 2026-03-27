@@ -27,6 +27,7 @@ export type Artist = {
     preferred?: "whatsapp" | "email" | "phone";
   };
   gallery?: string[];
+  jams?: string[];
   availabilityStatus: "disponible" | "reservado" | "pendiente";
   availability: {
     date: string;
@@ -112,6 +113,10 @@ export const artists: Artist[] = [
       "https://images.unsplash.com/photo-1464375117522-1311dd6d4110?w=1200&h=800&fit=crop",
       "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=1200&h=800&fit=crop",
     ],
+    jams: [
+      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "https://youtu.be/aqz-KE-bpKQ",
+    ],
     availabilityStatus: "disponible",
     availability: [
       { date: "2026-03-28", status: "reservado", bandSlug: "arturo-de-la-torre", location: "CDMX", eventType: "GALA", durationHours: 2 },
@@ -143,6 +148,9 @@ export const artists: Artist[] = [
     gallery: [
       "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1200&h=800&fit=crop",
       "https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=800&fit=crop",
+    ],
+    jams: [
+      "https://www.youtube.com/watch?v=Zi_XLOBDo_Y",
     ],
     availabilityStatus: "pendiente",
     availability: [
@@ -618,6 +626,7 @@ export const artistsDataExample = {
       cvUrl: "https://.../cv.pdf",
       contact: { email: "brassarmada@gmail.com", phone: "3334669630", preferred: "whatsapp" },
       gallery: ["https://.../photo1.jpg", "https://.../photo2.jpg"],
+      jams: ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
       availabilityStatus: "disponible",
       availability: [{ date: "2026-04-12", status: "disponible", bandSlug: "arturo-de-la-torre", location: "CDMX", eventType: "CORPORATIVO", durationHours: 2 }],
     },

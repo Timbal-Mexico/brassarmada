@@ -9,13 +9,14 @@ import NotFound from "./pages/NotFound.tsx";
 import ArtistsPage from "./pages/Artists.tsx";
 import ArtistProfile from "./pages/ArtistProfile.tsx";
 import ArtistAdmin from "./pages/ArtistAdmin.tsx";
+import NewsIndex from "./pages/NewsIndex.tsx";
+import NewsDetail from "./pages/NewsDetail.tsx";
+import ContactPage from "./pages/Contact.tsx";
+import StorePage from "./pages/Store.tsx";
+import ProjectsPage from "./pages/Projects.tsx";
+import LoginRedirect from "./pages/LoginRedirect.tsx";
 
 // New Pages (Placeholders for now)
-const News = () => <div className="p-20 text-center">NOTICIAS - PRÓXIMAMENTE</div>;
-const Projects = () => <div className="p-20 text-center">PROYECTOS - PRÓXIMAMENTE</div>;
-const Store = () => <div className="p-20 text-center">TIENDA - PRÓXIMAMENTE</div>;
-const Login = () => <div className="p-20 text-center">LOGIN - PRÓXIMAMENTE</div>;
-const Contact = () => <div className="p-20 text-center">CONTACTO - PRÓXIMAMENTE</div>;
 
 const queryClient = new QueryClient();
 
@@ -28,14 +29,15 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/bandas/:slug" element={<BandLanding />} />
-          <Route path="/noticias" element={<News />} />
-          <Route path="/proyectos" element={<Projects />} />
+          <Route path="/noticias" element={<NewsIndex />} />
+          <Route path="/noticias/:slug" element={<NewsDetail />} />
+          <Route path="/proyectos" element={<ProjectsPage />} />
           <Route path="/artistas" element={<ArtistsPage />} />
           <Route path="/artistas/:slug" element={<ArtistProfile />} />
           <Route path="/panel/artistas/:slug" element={<ArtistAdmin />} />
-          <Route path="/tienda" element={<Store />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/contacto" element={<Contact />} />
+          <Route path="/tienda" element={<StorePage />} />
+          <Route path="/login" element={<LoginRedirect />} />
+          <Route path="/contacto" element={<ContactPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

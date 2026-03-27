@@ -29,7 +29,7 @@ describe("Artist profile", () => {
     expect(screen.getByText("TRAYECTORIA")).toBeInTheDocument();
     expect(screen.getByText("TIMELINE")).toBeInTheDocument();
     expect(screen.getByText("INSTRUMENTOS")).toBeInTheDocument();
-    expect(screen.getByText("DISPONIBILIDAD")).toBeInTheDocument();
+    expect(screen.getByText("MIS JAMS")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "CONTRATAR" }));
     expect(await screen.findByText(/CONTRATACIÓN/i)).toBeInTheDocument();
