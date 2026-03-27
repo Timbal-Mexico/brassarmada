@@ -1,73 +1,93 @@
-# Welcome to your Lovable project
+# Brassarmada Monorepo
 
-## Project info
+Monorepo para brassarmada.com.mx y app.brassarmada.com.mx
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Estructura
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+brassarmada/
+├── apps/
+│   ├── web/           # brassarmada.com.mx
+│   └── admin/         # app.brassarmada.com.mx
+├── packages/
+│   ├── ui/            # Componentes compartidos
+│   ├── types/         # Tipos de TypeScript
+│   └── supabase/     # Cliente Supabase
+└── turbo.json
 ```
 
-**Edit a file directly in GitHub**
+## Primeros Pasos
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 1. Instalar dependencias
 
-**Use GitHub Codespaces**
+```bash
+bun install
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 2. Configurar variables de entorno
 
-## What technologies are used for this project?
+```bash
+cp apps/web/.env.example apps/web/.env.local
+cp apps/admin/.env.example apps/admin/.env.local
+```
 
-This project is built with:
+Agregar tus credenciales de Supabase en ambos archivos.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 3. Ejecutar localmente
 
-## How can I deploy this project?
+```bash
+# Ambos proyectos
+bun dev
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+# Solo web
+bun dev --filter=web
 
-## Can I connect a custom domain to my Lovable project?
+# Solo admin
+bun dev --filter=admin
+```
 
-Yes, you can!
+## Deployment en Vercel
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 1. Crear 2 proyectos en Vercel
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**Proyecto 1 (Web):**
+- Repository: tu-repo
+- Root Directory: `apps/web`
+- Domain: `brassarmada.com.mx`
+
+**Proyecto 2 (Admin):**
+- Repository: tu-repo
+- Root Directory: `apps/admin`
+- Domain: `app.brassarmada.com.mx`
+
+### 2. Configurar variables de entorno
+
+En cada proyecto de Vercel, agregar:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+### 3. Deploy
+
+Vercel detectará cambios automáticamente y solo rebuildá el proyecto que cambió.
+
+## Scripts
+
+```bash
+bun dev          # Dev de todos los proyectos
+bun build        # Build de todos
+bun lint         # Lint de todos
+bun test         # Tests de todos
+bun clean        # Limpiar caches
+```
+
+## Agregar nuevos componentes UI compartidos
+
+1. Agregar a `packages/ui/src/` con el componente
+2. Exportar en `packages/ui/src/index.ts`
+3. Usar en apps con `import { Button } from "@brassarmada/ui/button"`
+
+## Agregar nuevos tipos
+
+1. Crear archivo en `packages/types/src/` (ej: `event.ts`)
+2. Exportar en `packages/types/src/index.ts`
+3. Usar en apps con `import type { Artist } from "@brassarmada/types"`

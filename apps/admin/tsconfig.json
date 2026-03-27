@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@brassarmada/types": [
+        "../../packages/types/src/index.ts"
+      ],
+      "@brassarmada/supabase": [
+        "../../packages/supabase/src/index.ts"
+      ],
+      "@brassarmada/ui": [
+        "../../packages/ui/src/index.ts"
+      ],
+      "@brassarmada/ui/permissions": [
+        "../../packages/ui/src/permissions.tsx"
+      ]
+    },
+    "skipLibCheck": true,
+    "strictNullChecks": false
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
+}
