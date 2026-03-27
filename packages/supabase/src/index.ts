@@ -4,7 +4,7 @@ import type { Profile } from "@brassarmada/types";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-if (!supabaseUrl || !supabaseAnonKey) throw new Error("Missing Supabase environment variables");
+export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey;
 
 export const TABLES = {
   ARTISTS: "artists",
@@ -45,7 +45,7 @@ const clearTokens = () => {
   window.localStorage.removeItem(REFRESH_TOKEN_KEY);
 };
 
-const apiBase = supabaseUrl.replace(/\/$/, "");
+const apiBase = isSupabaseConfigured ? (supabaseUrl as string).replace(/\/$/, "") : "";
 
 const fetchJson = async <T>(url: string, init: RequestInit): Promise<ApiResult<T>> => {
   try {
@@ -67,7 +67,7 @@ const authHeaders = () => {
 };
 
 const restHeaders = () => ({
-  apikey: supabaseAnonKey,
+  apikey: supabaseAnonKey ?? "",
   ...authHeaders(),
 });
 
@@ -160,11 +160,12 @@ class UpdateBuilder {
 export const supabase = {
   auth: {
     async signInWithPassword(payload: { email: string; password: string }) {
+      if (!isSupabaseConfigured) return { data: null, error: { message: "Supabase no configurado" } };
       const url = `${apiBase}/auth/v1/token?grant_type=password`;
       const out = await fetchJson<any>(url, {
         method: "POST",
         headers: {
-          apikey: supabaseAnonKey,
+          apikey: supabaseAnonKey ?? "",
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
@@ -180,12 +181,13 @@ export const supabase = {
       return { error: null };
     },
     async getUser(): Promise<ApiResult<{ user: SupabaseUser | null }>> {
+      if (!isSupabaseConfigured) return { data: { user: null }, error: null };
       const token = getAccessToken();
       if (!token) return { data: { user: null }, error: null };
       const url = `${apiBase}/auth/v1/user`;
       const out = await fetchJson<any>(url, {
         method: "GET",
-        headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${token}` },
+        headers: { apikey: supabaseAnonKey ?? "", Authorization: `Bearer ${token}` },
       });
       if (out.error) return { data: { user: null }, error: out.error };
       const user = out.data as SupabaseUser;

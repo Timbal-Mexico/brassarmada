@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { getAdminTestCredentials } from "@/lib/auth";
-import { supabase, useProfile } from "@brassarmada/supabase";
+import { isSupabaseConfigured, supabase, useProfile } from "@brassarmada/supabase";
 
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
@@ -44,6 +44,11 @@ const Login = () => {
       <div className="w-full max-w-md border border-border bg-background/80 backdrop-blur-sm p-8">
         <div className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Brass Armada Admin</div>
         <h1 className="mt-2 text-3xl font-display font-bold text-foreground">Login</h1>
+        {!isSupabaseConfigured ? (
+          <div className="mt-6 border border-border bg-muted/30 p-4 text-xs tracking-wide text-muted-foreground">
+            Falta configurar VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en las variables de entorno del deployment.
+          </div>
+        ) : null}
         <div className="mt-6 border border-border bg-muted/30 p-4 text-xs tracking-wide text-muted-foreground">
           Credenciales de prueba: {demo.email} / {demo.password}
         </div>
