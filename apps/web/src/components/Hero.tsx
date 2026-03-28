@@ -6,7 +6,7 @@ const Hero = () => {
   };
 
   return (
-    <section className="relative border-b border-black overflow-hidden bg-black">
+    <section className="relative -mt-16 md:mt-0 border-b border-black overflow-hidden bg-black">
       <div className="relative z-10 w-full">
         <div className="relative w-full overflow-hidden aspect-[4/5] sm:aspect-[16/9] lg:aspect-[21/9]">
           <img
@@ -16,7 +16,7 @@ const Hero = () => {
             className="absolute inset-0 h-full w-full object-cover object-center"
           />
 
-          <div className="absolute inset-0 z-10 flex items-center justify-center p-6 sm:p-8">
+          <div className="absolute inset-0 z-10 flex items-center justify-center p-6 pt-20 sm:p-8 sm:pt-8">
             <img
               src="/images/logos/brassaarmada.png"
               alt="Brass Armada"
