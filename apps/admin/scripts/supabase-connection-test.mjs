@@ -32,7 +32,7 @@ if (!url || !anon) {
 
 const base = url.replace(/\/$/, "");
 const authEndpoint = `${base}/auth/v1/settings`;
-const restEndpoint = `${base}/rest/v1/`;
+const restEndpoint = `${base}/rest/v1/bands?select=id&limit=1`;
 
 try {
   const authRes = await fetch(authEndpoint, {
@@ -49,7 +49,6 @@ try {
     method: "GET",
     headers: {
       apikey: anon,
-      Authorization: `Bearer ${anon}`,
     },
   });
   console.log(`REST status: ${restRes.status}`);

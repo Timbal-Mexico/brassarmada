@@ -141,12 +141,76 @@ begin
   end if;
 end $$;
 
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'profiles'
+      and column_name = 'role'
+      and data_type = 'text'
+  ) then
+    alter table public.profiles
+    alter column role drop default;
+
+    alter table public.profiles
+    alter column role type public.role
+    using role::public.role;
+
+    alter table public.profiles
+    alter column role set default 'viewer'::public.role;
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'permissions'
+      and column_name = 'role'
+      and data_type = 'text'
+  ) then
+    alter table public.permissions
+    alter column role type public.role
+    using role::public.role;
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'permissions'
+      and column_name = 'resource'
+      and data_type = 'text'
+  ) then
+    alter table public.permissions
+    alter column resource type public.permission_resource
+    using resource::public.permission_resource;
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'permissions'
+      and column_name = 'action'
+      and data_type = 'text'
+  ) then
+    alter table public.permissions
+    alter column action type public.permission_action
+    using action::public.permission_action;
+  end if;
+end $$;
+
 create or replace function public.current_role()
 returns public.role
 language sql
 stable
 as $$
-  select coalesce((select p.role from public.profiles p where p.id = auth.uid()), 'viewer'::public.role);
+  select coalesce(
+    (select (p.role::text)::public.role from public.profiles p where p.id = auth.uid()),
+    'viewer'::public.role
+  );
 $$;
 
 create or replace function public.is_admin()

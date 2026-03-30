@@ -35,6 +35,16 @@ const Login = () => {
       toast({ title: "No se pudo iniciar sesión", description: res.error.message });
       return;
     }
+    const refreshed = await profile.refetch();
+    if (!refreshed.data) {
+      setIsSubmitting(false);
+      toast({
+        title: "Usuario sin perfil",
+        description: "Falta crear tu profile en Supabase. Ejecuta el setup.sql o crea el registro en public.profiles.",
+      });
+      return;
+    }
+    setIsSubmitting(false);
     toast({ title: "Bienvenido", description: "Acceso concedido." });
     navigate(from || "/", { replace: true });
   };
