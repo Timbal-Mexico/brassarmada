@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install",
+  "installCommand": "cd apps/admin && npm install --workspaces=false",
   "buildCommand": "cd apps/admin && npm run build",
   "outputDirectory": "apps/admin/dist",
   "rewrites": [
