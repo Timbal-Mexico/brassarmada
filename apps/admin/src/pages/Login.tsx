@@ -22,7 +22,33 @@ const Login = () => {
   const canSubmit = emailOk && passwordOk && !isSubmitting;
 
   const profile = useProfile();
-  if (profile.data) return <Navigate to="/" replace />;
+  if (profile.data && profile.data.role !== "cliente") return <Navigate to="/" replace />;
+  if (profile.data && profile.data.role === "cliente") {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-md border border-border bg-background/80 backdrop-blur-sm p-8">
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Brass Armada Admin</div>
+          <h1 className="mt-2 text-3xl font-display font-bold text-foreground">Acceso denegado</h1>
+          <div className="mt-4 text-sm text-muted-foreground">
+            Tu cuenta está autenticada pero no tiene permisos para entrar al panel.
+          </div>
+          <div className="mt-6 rounded-md border border-border bg-muted/30 p-4 text-xs tracking-wide text-muted-foreground">
+            Rol actual: {profile.data.role.toUpperCase()} · {profile.data.email ?? ""}
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              await profile.refetch();
+            }}
+            className="mt-8 h-11 w-full border border-border bg-background text-foreground"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +66,7 @@ const Login = () => {
       setIsSubmitting(false);
       toast({
         title: "Usuario sin perfil",
-        description: "Falta crear tu profile en Supabase. Ejecuta el setup.sql o crea el registro en public.profiles.",
+        description: "Falta crear tu profile en Supabase. Crea el registro en public.users o aplica tu schema SQL.",
       });
       return;
     }

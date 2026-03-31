@@ -88,11 +88,11 @@ if (!accessToken) {
   process.exit(1);
 }
 
-const profileUrl = new URL(`${base}/rest/v1/profiles`);
-profileUrl.searchParams.set("select", "id,email,full_name,role");
-profileUrl.searchParams.set("id", `eq.${tokenRes.data?.user?.id ?? ""}`);
+const userUrl = new URL(`${base}/rest/v1/users`);
+userUrl.searchParams.set("select", "id,email,full_name,role");
+userUrl.searchParams.set("id", `eq.${tokenRes.data?.user?.id ?? ""}`);
 
-const profileRes = await fetch(profileUrl.toString(), {
+const userRes = await fetch(userUrl.toString(), {
   method: "GET",
   headers: {
     apikey: ANON_KEY,
@@ -101,13 +101,12 @@ const profileRes = await fetch(profileUrl.toString(), {
   },
 });
 
-const profileText = await profileRes.text();
-const profileData = profileText ? JSON.parse(profileText) : null;
+const userText = await userRes.text();
+const userData = userText ? JSON.parse(userText) : null;
 
 console.log("Login OK");
 console.log(`- user_id: ${tokenRes.data?.user?.id ?? "—"}`);
-console.log(`- profile: ${profileRes.status === 200 ? "OK" : `HTTP ${profileRes.status}`}`);
-if (profileRes.status === 200) {
-  console.log(`- role: ${profileData?.role ?? "—"}`);
+console.log(`- user_row: ${userRes.status === 200 ? "OK" : `HTTP ${userRes.status}`}`);
+if (userRes.status === 200) {
+  console.log(`- role: ${userData?.role ?? "—"}`);
 }
-

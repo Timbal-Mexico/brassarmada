@@ -1,702 +1,697 @@
-    create extension if not exists "pgcrypto";
-
-    do $$
-    begin
-    if not exists (select 1 from pg_type where typname = 'role') then
-        create type public.role as enum ('admin', 'editor', 'viewer');
-    end if;
-    if not exists (select 1 from pg_type where typname = 'permission_resource') then
-        create type public.permission_resource as enum ('news', 'store', 'artists', 'bands');
-    end if;
-    if not exists (select 1 from pg_type where typname = 'permission_action') then
-        create type public.permission_action as enum ('read', 'create', 'update', 'delete', 'publish');
-    end if;
-    end $$;
-
-    create or replace function public.set_updated_at()
-    returns trigger
-    language plpgsql
-    as $$
-    begin
-    new.updated_at = now();
-    return new;
-    end;
-    $$;
-
-    create table if not exists public.profiles (
-    id uuid primary key references auth.users(id) on delete cascade,
-    email text not null,
-    full_name text,
-    role public.role not null default 'viewer',
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
-    );
-
-    do $$
-    begin
-    if not exists (select 1 from pg_trigger where tgname = 'set_profiles_updated_at') then
-        create trigger set_profiles_updated_at
-        before update on public.profiles
-        for each row execute function public.set_updated_at();
-    end if;
-    end $$;
-
-    create table if not exists public.permissions (
-    id uuid primary key default gen_random_uuid(),
-    role public.role not null,
-    resource public.permission_resource not null,
-    action public.permission_action not null,
-    created_at timestamptz not null default now(),
-    unique (role, resource, action)
-    );
-
-    create or replace function public.handle_new_user()
-    returns trigger
-    language plpgsql
-    security definer
-    set search_path = public
-    as $$
-    begin
-    insert into public.profiles (id, email, full_name, role)
-    values (
-        new.id,
-        coalesce(new.email, ''),
-        nullif(new.raw_user_meta_data->>'full_name', ''),
-        'viewer'
-    )
-    on conflict (id) do update
-    set email = excluded.email;
-
-    return new;
-    end;
-    $$;
-
-    do $$
-    begin
-    if not exists (select 1 from pg_trigger where tgname = 'on_auth_user_created') then
-        create trigger on_auth_user_created
-        after insert on auth.users
-        for each row execute function public.handle_new_user();
-    end if;
-    end $$;
-
-    do $$
-    begin
-    if exists (
-        select 1
-        from information_schema.columns
-        where table_schema = 'public'
-        and table_name = 'profiles'
-        and column_name = 'role'
-        and data_type = 'text'
-    ) then
-        alter table public.profiles
-        alter column role drop default;
-
-        alter table public.profiles
-        alter column role type public.role
-        using role::public.role;
-
-        alter table public.profiles
-        alter column role set default 'viewer'::public.role;
-    end if;
-
-    if exists (
-        select 1
-        from information_schema.columns
-        where table_schema = 'public'
-        and table_name = 'permissions'
-        and column_name = 'role'
-        and data_type = 'text'
-    ) then
-        alter table public.permissions
-        alter column role type public.role
-        using role::public.role;
-    end if;
-
-    if exists (
-        select 1
-        from information_schema.columns
-        where table_schema = 'public'
-        and table_name = 'permissions'
-        and column_name = 'resource'
-        and data_type = 'text'
-    ) then
-        alter table public.permissions
-        alter column resource type public.permission_resource
-        using resource::public.permission_resource;
-    end if;
-
-    if exists (
-        select 1
-        from information_schema.columns
-        where table_schema = 'public'
-        and table_name = 'permissions'
-        and column_name = 'action'
-        and data_type = 'text'
-    ) then
-        alter table public.permissions
-        alter column action type public.permission_action
-        using action::public.permission_action;
-    end if;
-    end $$;
-
-    create or replace function public.current_role()
-    returns public.role
-    language sql
-    stable
-    as $$
-    select coalesce(
-        (select (p.role::text)::public.role from public.profiles p where p.id = auth.uid()),
-        'viewer'::public.role
-    );
-    $$;
-
-    create or replace function public.is_admin()
-    returns boolean
-    language sql
-    stable
-    as $$
-    select public.current_role() = 'admin'::public.role;
-    $$;
-
-    create or replace function public.has_permission(r public.permission_resource, a public.permission_action)
-    returns boolean
-    language sql
-    stable
-    as $$
-    select
-        case
-        when public.current_role() = 'admin'::public.role then true
-        else exists (
-            select 1 from public.permissions p
-            where p.role = public.current_role()
-            and p.resource = r
-            and p.action = a
-        )
-        end;
-    $$;
-
-    insert into public.permissions (role, resource, action)
-    values
-    ('viewer', 'news', 'read'),
-    ('viewer', 'store', 'read'),
-    ('viewer', 'artists', 'read'),
-    ('viewer', 'bands', 'read'),
-
-    ('editor', 'news', 'read'),
-    ('editor', 'news', 'create'),
-    ('editor', 'news', 'update'),
-    ('editor', 'store', 'read'),
-    ('editor', 'store', 'create'),
-    ('editor', 'store', 'update'),
-    ('editor', 'artists', 'read'),
-    ('editor', 'artists', 'update'),
-    ('editor', 'bands', 'read'),
-    ('editor', 'bands', 'update')
-    on conflict do nothing;
-
-    create table if not exists public.bands (
-    id uuid primary key default gen_random_uuid(),
-    name text not null,
-    slug text not null unique,
-    genre text,
-    description text,
-    image_url text,
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
-    );
-
-    do $$
-    begin
-    if not exists (select 1 from pg_trigger where tgname = 'set_bands_updated_at') then
-        create trigger set_bands_updated_at
-        before update on public.bands
-        for each row execute function public.set_updated_at();
-    end if;
-    end $$;
-
-    create table if not exists public.artists (
-    id uuid primary key default gen_random_uuid(),
-    user_id uuid unique references auth.users(id) on delete set null,
-    name text not null,
-    slug text not null unique,
-    bio text,
-    genre text,
-    debut_year int,
-    active boolean not null default true,
-    phone text,
-    email text,
-    social_links jsonb not null default '{}'::jsonb,
-    profile_image_url text,
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
-    );
-
-    do $$
-    begin
-    if not exists (select 1 from pg_trigger where tgname = 'set_artists_updated_at') then
-        create trigger set_artists_updated_at
-        before update on public.artists
-        for each row execute function public.set_updated_at();
-    end if;
-    end $$;
-
-    create table if not exists public.band_admins (
-    id uuid primary key default gen_random_uuid(),
-    band_id uuid not null references public.bands(id) on delete cascade,
-    user_id uuid not null references auth.users(id) on delete cascade,
-    role text not null default 'admin',
-    created_at timestamptz not null default now(),
-    unique (band_id, user_id)
-    );
-
-    create table if not exists public.band_members (
-    id uuid primary key default gen_random_uuid(),
-    band_id uuid not null references public.bands(id) on delete cascade,
-    artist_id uuid not null references public.artists(id) on delete cascade,
-    role text,
-    status text not null default 'pending' check (status in ('pending', 'active', 'removed')),
-    requested_by text not null default 'artist' check (requested_by in ('artist', 'band')),
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now(),
-    unique (band_id, artist_id)
-    );
-
-    do $$
-    begin
-    if not exists (select 1 from pg_trigger where tgname = 'set_band_members_updated_at') then
-        create trigger set_band_members_updated_at
-        before update on public.band_members
-        for each row execute function public.set_updated_at();
-    end if;
-    end $$;
-
-    create table if not exists public.news (
-    id uuid primary key default gen_random_uuid(),
-    title text not null,
-    slug text not null unique,
-    excerpt text,
-    content text,
-    tags text[] not null default '{}'::text[],
-    image_url text,
-    status text not null default 'draft' check (status in ('draft', 'published')),
-    published_at timestamptz,
-    created_by uuid references public.profiles(id) on delete set null,
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
-    );
-
-    do $$
-    begin
-    if not exists (select 1 from pg_trigger where tgname = 'set_news_updated_at') then
-        create trigger set_news_updated_at
-        before update on public.news
-        for each row execute function public.set_updated_at();
-    end if;
-    end $$;
-
-    create table if not exists public.store_items (
-    id uuid primary key default gen_random_uuid(),
-    name text not null,
-    band_id uuid references public.bands(id) on delete set null,
-    image_url text,
-    price text,
-    shopify_url text not null,
-    active boolean not null default true,
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
-    );
-
-    do $$
-    begin
-    if not exists (select 1 from pg_trigger where tgname = 'set_store_items_updated_at') then
-        create trigger set_store_items_updated_at
-        before update on public.store_items
-        for each row execute function public.set_updated_at();
-    end if;
-    end $$;
-
-    alter table public.profiles enable row level security;
-    alter table public.permissions enable row level security;
-    alter table public.bands enable row level security;
-    alter table public.artists enable row level security;
-    alter table public.band_admins enable row level security;
-    alter table public.band_members enable row level security;
-    alter table public.news enable row level security;
-    alter table public.store_items enable row level security;
-
-    drop policy if exists profiles_select_own_or_admin on public.profiles;
-    drop policy if exists profiles_update_admin_only on public.profiles;
-    drop policy if exists profiles_insert_admin_only on public.profiles;
-
-    create policy profiles_select_own_or_admin
-    on public.profiles
-    for select
-    to authenticated
-    using (auth.uid() = id or public.is_admin());
-
-    create policy profiles_update_admin_only
-    on public.profiles
-    for update
-    to authenticated
-    using (public.is_admin())
-    with check (public.is_admin());
-
-    create policy profiles_insert_admin_only
-    on public.profiles
-    for insert
-    to authenticated
-    with check (public.is_admin());
-
-    drop policy if exists permissions_select_authenticated on public.permissions;
-    drop policy if exists permissions_write_admin_only on public.permissions;
-
-    create policy permissions_select_authenticated
-    on public.permissions
-    for select
-    to authenticated
-    using (true);
-
-    create policy permissions_write_admin_only
-    on public.permissions
-    for all
-    to authenticated
-    using (public.is_admin())
-    with check (public.is_admin());
-
-    drop policy if exists bands_select_public on public.bands;
-    drop policy if exists bands_update_if_permitted on public.bands;
-    drop policy if exists bands_insert_admin_only on public.bands;
-    drop policy if exists bands_delete_admin_only on public.bands;
-
-    create policy bands_select_public
-    on public.bands
-    for select
-    to anon, authenticated
-    using (true);
-
-    create policy bands_update_if_permitted
-    on public.bands
-    for update
-    to authenticated
-    using (public.has_permission('bands', 'update'))
-    with check (public.has_permission('bands', 'update'));
-
-    create policy bands_insert_admin_only
-    on public.bands
-    for insert
-    to authenticated
-    with check (public.is_admin());
-
-    create policy bands_delete_admin_only
-    on public.bands
-    for delete
-    to authenticated
-    using (public.is_admin());
-
-    drop policy if exists artists_select_public on public.artists;
-    drop policy if exists artists_insert_self on public.artists;
-    drop policy if exists artists_update_self on public.artists;
-    drop policy if exists artists_delete_self on public.artists;
-    drop policy if exists artists_update_if_permitted on public.artists;
-
-    create policy artists_select_public
-    on public.artists
-    for select
-    to anon, authenticated
-    using (true);
-
-    create policy artists_insert_self
-    on public.artists
-    for insert
-    to authenticated
-    with check (auth.uid() = user_id);
-
-    create policy artists_update_self
-    on public.artists
-    for update
-    to authenticated
-    using (auth.uid() = user_id)
-    with check (auth.uid() = user_id);
-
-    create policy artists_delete_self
-    on public.artists
-    for delete
-    to authenticated
-    using (auth.uid() = user_id);
-
-    create policy artists_update_if_permitted
-    on public.artists
-    for update
-    to authenticated
-    using (public.has_permission('artists', 'update'))
-    with check (public.has_permission('artists', 'update'));
-
-    drop policy if exists band_admins_select_self on public.band_admins;
-    drop policy if exists band_admins_write_self on public.band_admins;
-    drop policy if exists band_admins_write_admin_only on public.band_admins;
-
-    create policy band_admins_select_self
-    on public.band_admins
-    for select
-    to authenticated
-    using (auth.uid() = user_id or public.is_admin());
-
-    create policy band_admins_write_self
-    on public.band_admins
-    for insert
-    to authenticated
-    with check (auth.uid() = user_id and public.is_admin());
-
-    create policy band_admins_write_admin_only
-    on public.band_admins
-    for all
-    to authenticated
-    using (public.is_admin())
-    with check (public.is_admin());
-
-    drop policy if exists band_members_select_public on public.band_members;
-    drop policy if exists band_members_insert_artist_or_admin on public.band_members;
-    drop policy if exists band_members_update_admin_only on public.band_members;
-    drop policy if exists band_members_delete_artist_or_admin on public.band_members;
-
-    create policy band_members_select_public
-    on public.band_members
-    for select
-    to anon, authenticated
-    using (true);
-
-    create policy band_members_insert_artist_or_admin
-    on public.band_members
-    for insert
-    to authenticated
-    with check (
-    exists (
-        select 1
-        from public.artists a
-        where a.id = band_members.artist_id
-        and a.user_id = auth.uid()
-    )
-    or exists (
-        select 1
-        from public.band_admins ba
-        where ba.band_id = band_members.band_id
-        and ba.user_id = auth.uid()
-    )
-    or public.is_admin()
-    );
-
-    create policy band_members_update_admin_only
-    on public.band_members
-    for update
-    to authenticated
-    using (
-    exists (
-        select 1
-        from public.band_admins ba
-        where ba.band_id = band_members.band_id
-        and ba.user_id = auth.uid()
-    )
-    or public.is_admin()
-    )
-    with check (
-    exists (
-        select 1
-        from public.band_admins ba
-        where ba.band_id = band_members.band_id
-        and ba.user_id = auth.uid()
-    )
-    or public.is_admin()
-    );
-
-    create policy band_members_delete_artist_or_admin
-    on public.band_members
-    for delete
-    to authenticated
-    using (
-    exists (
-        select 1
-        from public.artists a
-        where a.id = band_members.artist_id
-        and a.user_id = auth.uid()
-    )
-    or exists (
-        select 1
-        from public.band_admins ba
-        where ba.band_id = band_members.band_id
-        and ba.user_id = auth.uid()
-    )
-    or public.is_admin()
-    );
-
-    drop policy if exists news_select_public_or_role on public.news;
-    drop policy if exists news_create_if_permitted on public.news;
-    drop policy if exists news_update_if_permitted on public.news;
-    drop policy if exists news_delete_admin_only on public.news;
-
-    create policy news_select_public_or_role
-    on public.news
-    for select
-    to anon, authenticated
-    using (
-    status = 'published'
-    or (auth.role() = 'authenticated' and public.has_permission('news', 'read'))
-    );
-
-    create policy news_create_if_permitted
-    on public.news
-    for insert
-    to authenticated
-    with check (public.has_permission('news', 'create'));
-
-    create policy news_update_if_permitted
-    on public.news
-    for update
-    to authenticated
-    using (public.has_permission('news', 'update') or public.has_permission('news', 'publish'))
-    with check (
-    (status = 'published' and public.has_permission('news', 'publish'))
-    or (status <> 'published' and public.has_permission('news', 'update'))
-    );
-
-    create policy news_delete_admin_only
-    on public.news
-    for delete
-    to authenticated
-    using (public.is_admin());
-
-    drop policy if exists store_select_public_or_role on public.store_items;
-    drop policy if exists store_create_if_permitted on public.store_items;
-    drop policy if exists store_update_if_permitted on public.store_items;
-    drop policy if exists store_delete_admin_only on public.store_items;
-
-    create policy store_select_public_or_role
-    on public.store_items
-    for select
-    to anon, authenticated
-    using (
-    active = true
-    or (auth.role() = 'authenticated' and public.has_permission('store', 'read'))
-    );
-
-    create policy store_create_if_permitted
-    on public.store_items
-    for insert
-    to authenticated
-    with check (public.has_permission('store', 'create'));
-
-    create policy store_update_if_permitted
-    on public.store_items
-    for update
-    to authenticated
-    using (public.has_permission('store', 'update'))
-    with check (public.has_permission('store', 'update'));
-
-    create policy store_delete_admin_only
-    on public.store_items
-    for delete
-    to authenticated
-    using (public.is_admin());
-
-    insert into storage.buckets (id, name, public)
-    values
-    ('artists-public', 'artists-public', true),
-    ('artists-private', 'artists-private', false)
-    on conflict (id) do nothing;
-
-    drop policy if exists artists_public_read on storage.objects;
-    drop policy if exists artists_public_write_own_folder on storage.objects;
-    drop policy if exists artists_public_update_own_folder on storage.objects;
-    drop policy if exists artists_public_delete_own_folder on storage.objects;
-    drop policy if exists artists_private_read_own_folder on storage.objects;
-    drop policy if exists artists_private_write_own_folder on storage.objects;
-    drop policy if exists artists_private_update_own_folder on storage.objects;
-    drop policy if exists artists_private_delete_own_folder on storage.objects;
-
-    create policy artists_public_read
-    on storage.objects
-    for select
-    to anon, authenticated
-    using (bucket_id = 'artists-public');
-
-    create policy artists_public_write_own_folder
-    on storage.objects
-    for insert
-    to authenticated
-    with check (
-    bucket_id = 'artists-public'
-    and owner = auth.uid()
-    and name like auth.uid() || '/%'
-    );
-
-    create policy artists_public_update_own_folder
-    on storage.objects
-    for update
-    to authenticated
-    using (
-    bucket_id = 'artists-public'
-    and owner = auth.uid()
-    and name like auth.uid() || '/%'
-    )
-    with check (
-    bucket_id = 'artists-public'
-    and owner = auth.uid()
-    and name like auth.uid() || '/%'
-    );
-
-    create policy artists_public_delete_own_folder
-    on storage.objects
-    for delete
-    to authenticated
-    using (
-    bucket_id = 'artists-public'
-    and owner = auth.uid()
-    and name like auth.uid() || '/%'
-    );
-
-    create policy artists_private_read_own_folder
-    on storage.objects
-    for select
-    to authenticated
-    using (
-    bucket_id = 'artists-private'
-    and owner = auth.uid()
-    and name like auth.uid() || '/%'
-    );
-
-    create policy artists_private_write_own_folder
-    on storage.objects
-    for insert
-    to authenticated
-    with check (
-    bucket_id = 'artists-private'
-    and owner = auth.uid()
-    and name like auth.uid() || '/%'
-    );
-
-    create policy artists_private_update_own_folder
-    on storage.objects
-    for update
-    to authenticated
-    using (
-    bucket_id = 'artists-private'
-    and owner = auth.uid()
-    and name like auth.uid() || '/%'
-    )
-    with check (
-    bucket_id = 'artists-private'
-    and owner = auth.uid()
-    and name like auth.uid() || '/%'
-    );
-
-    create policy artists_private_delete_own_folder
-    on storage.objects
-    for delete
-    to authenticated
-    using (
-    bucket_id = 'artists-private'
-    and owner = auth.uid()
-    and name like auth.uid() || '/%'
-    );
-
+-- ============================================
+-- Brass Armada - Setup SQL
+-- ============================================
+
+-- 1. Extensiones
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- 2. Enum de roles (si no existe)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    CREATE TYPE public.user_role AS ENUM ('super_admin', 'admin', 'artista', 'cliente');
+  END IF;
+END $$;
+
+-- 3. Función updated_at
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  new.updated_at = NOW();
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 4. Tabla users (si no existe)
+CREATE TABLE IF NOT EXISTS public.users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL UNIQUE,
+  full_name TEXT,
+  avatar_url TEXT,
+  role user_role NOT NULL DEFAULT 'cliente',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Trigger users
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_users_updated_at') THEN
+    CREATE TRIGGER set_users_updated_at
+    BEFORE UPDATE ON public.users
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- Trigger auto-crear users
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, role)
+  VALUES (new.id, COALESCE(new.email, ''), 'cliente'::public.user_role)
+  ON CONFLICT (id) DO UPDATE SET email = excluded.email;
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'on_auth_user_created') THEN
+    CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
+  END IF;
+END $$;
+
+-- 5. Tabla artists (si no existe)
+CREATE TABLE IF NOT EXISTS public.artists (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
+  stage_name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  bio TEXT,
+  genre TEXT,
+  phone TEXT,
+  website TEXT,
+  social_links JSONB DEFAULT '{}',
+  profile_image_url TEXT,
+  banner_image_url TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_artists_updated_at') THEN
+    CREATE TRIGGER set_artists_updated_at
+    BEFORE UPDATE ON public.artists
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- 5.1 Tabla artist_albums (si no existe)
+CREATE TABLE IF NOT EXISTS public.artist_albums (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  artist_id UUID NOT NULL REFERENCES public.artists(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  release_date DATE,
+  cover_image_url TEXT,
+  is_published BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(artist_id, slug)
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_artist_albums_updated_at') THEN
+    CREATE TRIGGER set_artist_albums_updated_at
+    BEFORE UPDATE ON public.artist_albums
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- 5.2 Tabla artist_tracks (si no existe)
+CREATE TABLE IF NOT EXISTS public.artist_tracks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  artist_id UUID NOT NULL REFERENCES public.artists(id) ON DELETE CASCADE,
+  album_id UUID REFERENCES public.artist_albums(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  duration_seconds INT,
+  audio_url TEXT,
+  is_published BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(artist_id, slug)
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_artist_tracks_updated_at') THEN
+    CREATE TRIGGER set_artist_tracks_updated_at
+    BEFORE UPDATE ON public.artist_tracks
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- 5.3 Tabla artist_videos (si no existe)
+CREATE TABLE IF NOT EXISTS public.artist_videos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  artist_id UUID NOT NULL REFERENCES public.artists(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  video_url TEXT NOT NULL,
+  thumbnail_url TEXT,
+  platform TEXT NOT NULL DEFAULT 'youtube' CHECK (platform IN ('youtube', 'vimeo', 'custom')),
+  is_published BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_artist_videos_updated_at') THEN
+    CREATE TRIGGER set_artist_videos_updated_at
+    BEFORE UPDATE ON public.artist_videos
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- 5.4 Tabla artist_play_events (si no existe)
+CREATE TABLE IF NOT EXISTS public.artist_play_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  artist_id UUID NOT NULL REFERENCES public.artists(id) ON DELETE CASCADE,
+  content_type TEXT NOT NULL CHECK (content_type IN ('track', 'video')),
+  content_id UUID,
+  played_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  country TEXT,
+  platform TEXT
+);
+
+-- 5.5 Tabla artist_revenue_events (si no existe)
+CREATE TABLE IF NOT EXISTS public.artist_revenue_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  artist_id UUID NOT NULL REFERENCES public.artists(id) ON DELETE CASCADE,
+  source TEXT NOT NULL CHECK (source IN ('streaming', 'tickets', 'merch', 'other')),
+  amount_cents INT NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'MXN',
+  occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  note TEXT
+);
+
+-- 6. Tabla bands (si no existe)
+CREATE TABLE IF NOT EXISTS public.bands (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  genre TEXT,
+  description TEXT,
+  image_url TEXT,
+  banner_image_url TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_bands_updated_at') THEN
+    CREATE TRIGGER set_bands_updated_at
+    BEFORE UPDATE ON public.bands
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- 7. Tabla band_members (si no existe)
+CREATE TABLE IF NOT EXISTS public.band_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  band_id UUID NOT NULL REFERENCES public.bands(id) ON DELETE CASCADE,
+  artist_id UUID NOT NULL REFERENCES public.artists(id) ON DELETE CASCADE,
+  role_in_band TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('active', 'inactive', 'pending')),
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(band_id, artist_id)
+);
+
+-- 8. Tabla admins (si no existe)
+CREATE TABLE IF NOT EXISTS public.admins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  department TEXT DEFAULT 'general',
+  permissions JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_admins_updated_at') THEN
+    CREATE TRIGGER set_admins_updated_at
+    BEFORE UPDATE ON public.admins
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- 9. Tabla events (si no existe)
+CREATE TABLE IF NOT EXISTS public.events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  band_id UUID REFERENCES public.bands(id) ON DELETE SET NULL,
+  artist_id UUID REFERENCES public.artists(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  description TEXT,
+  date TIMESTAMPTZ NOT NULL,
+  end_date TIMESTAMPTZ,
+  venue TEXT,
+  address TEXT,
+  city TEXT,
+  country TEXT,
+  latitude NUMERIC(10, 8),
+  longitude NUMERIC(11, 8),
+  image_url TEXT,
+  ticket_url TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  rejection_reason TEXT,
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT events_owner CHECK (
+    (band_id IS NOT NULL AND artist_id IS NULL) OR
+    (band_id IS NULL AND artist_id IS NOT NULL)
+  )
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_events_updated_at') THEN
+    CREATE TRIGGER set_events_updated_at
+    BEFORE UPDATE ON public.events
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- 10. Tabla blogs (si no existe)
+CREATE TABLE IF NOT EXISTS public.blogs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_type TEXT NOT NULL CHECK (owner_type IN ('band', 'artist')),
+  owner_id UUID NOT NULL,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  description TEXT,
+  logo_url TEXT,
+  cover_image_url TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(owner_type, owner_id)
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_blogs_updated_at') THEN
+    CREATE TRIGGER set_blogs_updated_at
+    BEFORE UPDATE ON public.blogs
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- 11. Tabla blog_posts (si no existe)
+CREATE TABLE IF NOT EXISTS public.blog_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  blog_id UUID NOT NULL REFERENCES public.blogs(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  excerpt TEXT,
+  content TEXT,
+  cover_image_url TEXT,
+  tags TEXT[] DEFAULT '{}',
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+  published_at TIMESTAMPTZ,
+  featured BOOLEAN DEFAULT FALSE,
+  author_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_blog_posts_updated_at') THEN
+    CREATE TRIGGER set_blog_posts_updated_at
+    BEFORE UPDATE ON public.blog_posts
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- 12. Tabla store_items (si no existe)
+CREATE TABLE IF NOT EXISTS public.store_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  band_id UUID REFERENCES public.bands(id) ON DELETE SET NULL,
+  artist_id UUID REFERENCES public.artists(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  description TEXT,
+  price TEXT,
+  currency TEXT DEFAULT 'MXN',
+  shopify_product_id TEXT,
+  shopify_url TEXT,
+  image_url TEXT,
+  images JSONB DEFAULT '[]',
+  category TEXT,
+  tags TEXT[] DEFAULT '{}',
+  active BOOLEAN DEFAULT TRUE,
+  stock INT DEFAULT -1,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT store_owner CHECK (
+    (band_id IS NOT NULL AND artist_id IS NULL) OR
+    (band_id IS NULL AND artist_id IS NOT NULL)
+  )
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_store_items_updated_at') THEN
+    CREATE TRIGGER set_store_items_updated_at
+    BEFORE UPDATE ON public.store_items
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+  END IF;
+END $$;
+
+-- ============================================
+-- HABILITAR RLS
+-- ============================================
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.band_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.blogs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.blog_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.store_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artist_albums ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artist_tracks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artist_videos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artist_play_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.artist_revenue_events ENABLE ROW LEVEL SECURITY;
+
+-- ============================================
+-- FUNCIONES HELPERS
+-- ============================================
+CREATE OR REPLACE FUNCTION public.get_user_role()
+RETURNS user_role AS $$
+  SELECT COALESCE(
+    (SELECT u.role FROM public.users u WHERE u.id = auth.uid()),
+    'cliente'::public.user_role
+  );
+$$ LANGUAGE SQL STABLE;
+
+CREATE OR REPLACE FUNCTION public.is_super_admin()
+RETURNS BOOLEAN AS $$
+  SELECT public.get_user_role() = 'super_admin'::public.user_role;
+$$ LANGUAGE SQL STABLE;
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT public.get_user_role() IN ('admin', 'super_admin');
+$$ LANGUAGE SQL STABLE;
+
+CREATE OR REPLACE FUNCTION public.is_artista()
+RETURNS BOOLEAN AS $$
+  SELECT public.get_user_role() = 'artista'::public.user_role;
+$$ LANGUAGE SQL STABLE;
+
+CREATE OR REPLACE FUNCTION public.current_artist_id()
+RETURNS UUID AS $$
+  SELECT a.id
+  FROM public.artists a
+  WHERE a.user_id = auth.uid()
+  LIMIT 1;
+$$ LANGUAGE SQL STABLE;
+
+-- ============================================
+-- POLICIES RLS
+-- ============================================
+
+-- USERS
+DROP POLICY IF EXISTS "users_select_all" ON public.users;
+DROP POLICY IF EXISTS "users_update_own" ON public.users;
+DROP POLICY IF EXISTS "users_update_by_super_admin" ON public.users;
+DROP POLICY IF EXISTS "users_insert_super_admin" ON public.users;
+DROP POLICY IF EXISTS "users_delete_super_admin" ON public.users;
+
+CREATE POLICY "users_select_all" ON public.users FOR SELECT TO authenticated USING (true);
+CREATE POLICY "users_update_own" ON public.users FOR UPDATE TO authenticated
+USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+CREATE POLICY "users_update_by_super_admin" ON public.users FOR UPDATE TO authenticated
+USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
+CREATE POLICY "users_insert_super_admin" ON public.users FOR INSERT TO authenticated
+WITH CHECK (public.is_super_admin());
+CREATE POLICY "users_delete_super_admin" ON public.users FOR DELETE TO authenticated
+USING (public.is_super_admin());
+
+-- ARTISTS
+DROP POLICY IF EXISTS "artists_select_all" ON public.artists;
+DROP POLICY IF EXISTS "artists_select_public" ON public.artists;
+DROP POLICY IF EXISTS "artists_insert_own" ON public.artists;
+DROP POLICY IF EXISTS "artists_update_own" ON public.artists;
+DROP POLICY IF EXISTS "artists_delete_super_admin" ON public.artists;
+
+CREATE POLICY "artists_select_public" ON public.artists FOR SELECT TO anon
+USING (is_active = TRUE);
+
+CREATE POLICY "artists_select_all" ON public.artists FOR SELECT TO authenticated USING (true);
+CREATE POLICY "artists_insert_own" ON public.artists FOR INSERT TO authenticated
+WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "artists_update_own" ON public.artists FOR UPDATE TO authenticated
+USING (auth.uid() = user_id OR public.is_admin());
+CREATE POLICY "artists_delete_super_admin" ON public.artists FOR DELETE TO authenticated
+USING (public.is_super_admin());
+
+-- ADMINS
+DROP POLICY IF EXISTS "admins_select_staff" ON public.admins;
+DROP POLICY IF EXISTS "admins_insert_super_admin" ON public.admins;
+DROP POLICY IF EXISTS "admins_update_super_admin" ON public.admins;
+
+CREATE POLICY "admins_select_staff" ON public.admins FOR SELECT TO authenticated
+USING (auth.uid() = user_id OR public.is_super_admin());
+CREATE POLICY "admins_insert_super_admin" ON public.admins FOR INSERT TO authenticated
+WITH CHECK (public.is_super_admin());
+CREATE POLICY "admins_update_super_admin" ON public.admins FOR UPDATE TO authenticated
+USING (public.is_super_admin());
+
+-- BANDS
+DROP POLICY IF EXISTS "bands_select_all" ON public.bands;
+DROP POLICY IF EXISTS "bands_insert_admin" ON public.bands;
+DROP POLICY IF EXISTS "bands_update_admin" ON public.bands;
+DROP POLICY IF EXISTS "bands_delete_super_admin" ON public.bands;
+
+CREATE POLICY "bands_select_all" ON public.bands FOR SELECT TO authenticated USING (true);
+CREATE POLICY "bands_insert_admin" ON public.bands FOR INSERT TO authenticated
+WITH CHECK (public.is_admin());
+CREATE POLICY "bands_update_admin" ON public.bands FOR UPDATE TO authenticated
+USING (public.is_admin());
+CREATE POLICY "bands_delete_super_admin" ON public.bands FOR DELETE TO authenticated
+USING (public.is_super_admin());
+
+-- BAND_MEMBERS
+DROP POLICY IF EXISTS "band_members_select_all" ON public.band_members;
+DROP POLICY IF EXISTS "band_members_insert_admin" ON public.band_members;
+DROP POLICY IF EXISTS "band_members_update_admin" ON public.band_members;
+DROP POLICY IF EXISTS "band_members_delete_admin" ON public.band_members;
+DROP POLICY IF EXISTS "band_members_insert_self" ON public.band_members;
+DROP POLICY IF EXISTS "band_members_delete_self" ON public.band_members;
+
+CREATE POLICY "band_members_select_all" ON public.band_members FOR SELECT TO authenticated USING (true);
+CREATE POLICY "band_members_insert_admin" ON public.band_members FOR INSERT TO authenticated
+WITH CHECK (public.is_admin());
+CREATE POLICY "band_members_update_admin" ON public.band_members FOR UPDATE TO authenticated
+USING (public.is_admin());
+CREATE POLICY "band_members_delete_admin" ON public.band_members FOR DELETE TO authenticated
+USING (public.is_admin());
+
+CREATE POLICY "band_members_insert_self" ON public.band_members FOR INSERT TO authenticated
+WITH CHECK (
+  public.is_artista()
+  AND artist_id = public.current_artist_id()
+  AND status = 'pending'
+);
+
+CREATE POLICY "band_members_delete_self" ON public.band_members FOR DELETE TO authenticated
+USING (
+  public.is_artista()
+  AND artist_id = public.current_artist_id()
+);
+
+-- EVENTS
+DROP POLICY IF EXISTS "events_select_all" ON public.events;
+DROP POLICY IF EXISTS "events_insert_artista" ON public.events;
+DROP POLICY IF EXISTS "events_update_artista_or_admin" ON public.events;
+DROP POLICY IF EXISTS "events_delete_admin" ON public.events;
+
+CREATE POLICY "events_select_all" ON public.events FOR SELECT TO authenticated USING (true);
+CREATE POLICY "events_insert_artista" ON public.events FOR INSERT TO authenticated
+WITH CHECK (public.is_artista() OR public.is_admin());
+CREATE POLICY "events_update_artista_or_admin" ON public.events FOR UPDATE TO authenticated
+USING (
+  (public.is_artista() AND created_by = auth.uid()) OR
+  public.is_admin()
+);
+CREATE POLICY "events_delete_admin" ON public.events FOR DELETE TO authenticated
+USING (public.is_super_admin());
+
+-- BLOGS
+DROP POLICY IF EXISTS "blogs_select_all" ON public.blogs;
+DROP POLICY IF EXISTS "blogs_insert_admin" ON public.blogs;
+DROP POLICY IF EXISTS "blogs_update_admin" ON public.blogs;
+DROP POLICY IF EXISTS "blogs_delete_admin" ON public.blogs;
+
+CREATE POLICY "blogs_select_all" ON public.blogs FOR SELECT TO authenticated USING (true);
+CREATE POLICY "blogs_insert_admin" ON public.blogs FOR INSERT TO authenticated
+WITH CHECK (public.is_admin());
+CREATE POLICY "blogs_update_admin" ON public.blogs FOR UPDATE TO authenticated
+USING (public.is_admin());
+CREATE POLICY "blogs_delete_admin" ON public.blogs FOR DELETE TO authenticated
+USING (public.is_admin());
+
+-- BLOG_POSTS
+DROP POLICY IF EXISTS "blog_posts_select_all" ON public.blog_posts;
+DROP POLICY IF EXISTS "blog_posts_insert_admin" ON public.blog_posts;
+DROP POLICY IF EXISTS "blog_posts_update_admin" ON public.blog_posts;
+DROP POLICY IF EXISTS "blog_posts_delete_admin" ON public.blog_posts;
+
+CREATE POLICY "blog_posts_select_all" ON public.blog_posts FOR SELECT TO authenticated USING (true);
+CREATE POLICY "blog_posts_insert_admin" ON public.blog_posts FOR INSERT TO authenticated
+WITH CHECK (public.is_admin());
+CREATE POLICY "blog_posts_update_admin" ON public.blog_posts FOR UPDATE TO authenticated
+USING (public.is_admin());
+CREATE POLICY "blog_posts_delete_admin" ON public.blog_posts FOR DELETE TO authenticated
+USING (public.is_admin());
+
+-- STORE
+DROP POLICY IF EXISTS "store_select_all" ON public.store_items;
+DROP POLICY IF EXISTS "store_insert_admin" ON public.store_items;
+DROP POLICY IF EXISTS "store_update_admin" ON public.store_items;
+DROP POLICY IF EXISTS "store_delete_admin" ON public.store_items;
+
+CREATE POLICY "store_select_all" ON public.store_items FOR SELECT TO authenticated USING (true);
+CREATE POLICY "store_insert_admin" ON public.store_items FOR INSERT TO authenticated
+WITH CHECK (public.is_admin());
+CREATE POLICY "store_update_admin" ON public.store_items FOR UPDATE TO authenticated
+USING (public.is_admin());
+CREATE POLICY "store_delete_admin" ON public.store_items FOR DELETE TO authenticated
+USING (public.is_admin());
+
+-- ARTIST_CONTENT
+DROP POLICY IF EXISTS "artist_albums_select_public" ON public.artist_albums;
+DROP POLICY IF EXISTS "artist_albums_select_owner" ON public.artist_albums;
+DROP POLICY IF EXISTS "artist_albums_write_owner" ON public.artist_albums;
+
+CREATE POLICY "artist_albums_select_public" ON public.artist_albums FOR SELECT TO anon
+USING (
+  is_published = TRUE
+  AND EXISTS (SELECT 1 FROM public.artists a WHERE a.id = artist_id AND a.is_active = TRUE)
+);
+
+CREATE POLICY "artist_albums_select_owner" ON public.artist_albums FOR SELECT TO authenticated
+USING (public.is_admin() OR artist_id = public.current_artist_id());
+
+CREATE POLICY "artist_albums_write_owner" ON public.artist_albums FOR ALL TO authenticated
+USING (public.is_admin() OR artist_id = public.current_artist_id())
+WITH CHECK (public.is_admin() OR artist_id = public.current_artist_id());
+
+DROP POLICY IF EXISTS "artist_tracks_select_public" ON public.artist_tracks;
+DROP POLICY IF EXISTS "artist_tracks_select_owner" ON public.artist_tracks;
+DROP POLICY IF EXISTS "artist_tracks_write_owner" ON public.artist_tracks;
+
+CREATE POLICY "artist_tracks_select_public" ON public.artist_tracks FOR SELECT TO anon
+USING (
+  is_published = TRUE
+  AND EXISTS (SELECT 1 FROM public.artists a WHERE a.id = artist_id AND a.is_active = TRUE)
+);
+
+CREATE POLICY "artist_tracks_select_owner" ON public.artist_tracks FOR SELECT TO authenticated
+USING (public.is_admin() OR artist_id = public.current_artist_id());
+
+CREATE POLICY "artist_tracks_write_owner" ON public.artist_tracks FOR ALL TO authenticated
+USING (public.is_admin() OR artist_id = public.current_artist_id())
+WITH CHECK (public.is_admin() OR artist_id = public.current_artist_id());
+
+DROP POLICY IF EXISTS "artist_videos_select_public" ON public.artist_videos;
+DROP POLICY IF EXISTS "artist_videos_select_owner" ON public.artist_videos;
+DROP POLICY IF EXISTS "artist_videos_write_owner" ON public.artist_videos;
+
+CREATE POLICY "artist_videos_select_public" ON public.artist_videos FOR SELECT TO anon
+USING (
+  is_published = TRUE
+  AND EXISTS (SELECT 1 FROM public.artists a WHERE a.id = artist_id AND a.is_active = TRUE)
+);
+
+CREATE POLICY "artist_videos_select_owner" ON public.artist_videos FOR SELECT TO authenticated
+USING (public.is_admin() OR artist_id = public.current_artist_id());
+
+CREATE POLICY "artist_videos_write_owner" ON public.artist_videos FOR ALL TO authenticated
+USING (public.is_admin() OR artist_id = public.current_artist_id())
+WITH CHECK (public.is_admin() OR artist_id = public.current_artist_id());
+
+DROP POLICY IF EXISTS "artist_play_events_select_owner" ON public.artist_play_events;
+DROP POLICY IF EXISTS "artist_play_events_insert_owner" ON public.artist_play_events;
+
+CREATE POLICY "artist_play_events_select_owner" ON public.artist_play_events FOR SELECT TO authenticated
+USING (public.is_admin() OR artist_id = public.current_artist_id());
+
+CREATE POLICY "artist_play_events_insert_owner" ON public.artist_play_events FOR INSERT TO authenticated
+WITH CHECK (public.is_admin() OR artist_id = public.current_artist_id());
+
+DROP POLICY IF EXISTS "artist_revenue_events_select_owner" ON public.artist_revenue_events;
+DROP POLICY IF EXISTS "artist_revenue_events_write_owner" ON public.artist_revenue_events;
+
+CREATE POLICY "artist_revenue_events_select_owner" ON public.artist_revenue_events FOR SELECT TO authenticated
+USING (public.is_admin() OR artist_id = public.current_artist_id());
+
+CREATE POLICY "artist_revenue_events_write_owner" ON public.artist_revenue_events FOR ALL TO authenticated
+USING (public.is_admin() OR artist_id = public.current_artist_id())
+WITH CHECK (public.is_admin() OR artist_id = public.current_artist_id());
+
+-- ============================================
+-- STORAGE (buckets)
+-- ============================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES
+  ('artists-public', 'artists-public', true),
+  ('artists-private', 'artists-private', false),
+  ('bands-public', 'bands-public', true),
+  ('bands-private', 'bands-private', false),
+  ('blog-images', 'blog-images', true),
+  ('event-images', 'event-images', true),
+  ('store-images', 'store-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage policies
+DROP POLICY IF EXISTS "artists_public_read" ON storage.objects;
+DROP POLICY IF EXISTS "artists_public_upload" ON storage.objects;
+DROP POLICY IF EXISTS "bands_public_read" ON storage.objects;
+DROP POLICY IF EXISTS "bands_public_upload" ON storage.objects;
+
+CREATE POLICY "artists_public_read" ON storage.objects
+FOR SELECT TO authenticated USING (bucket_id = 'artists-public');
+
+CREATE POLICY "artists_public_upload" ON storage.objects
+FOR INSERT TO authenticated
+WITH CHECK (bucket_id = 'artists-public' AND owner = auth.uid());
+
+CREATE POLICY "bands_public_read" ON storage.objects
+FOR SELECT TO authenticated USING (bucket_id = 'bands-public');
+
+CREATE POLICY "bands_public_upload" ON storage.objects
+FOR INSERT TO authenticated
+WITH CHECK (bucket_id = 'bands-public' AND owner = auth.uid());
+
+-- ============================================
+-- CREAR SUPER ADMIN
+-- ============================================
+INSERT INTO auth.users (
+  id, email, encrypted_password, email_confirmed_at, 
+  raw_user_meta_data, created_at, updated_at
+) VALUES (
+  gen_random_uuid(),
+  'aloza.timbal@gmail.com',
+  crypt('B4zinga!', gen_salt('bf')),
+  NOW(),
+  '{"full_name": "Ariel Loza"}'::jsonb,
+  NOW(),
+  NOW()
+);
+
+UPDATE public.users 
+SET role = 'super_admin'::public.user_role, full_name = 'Ariel Loza'
+WHERE email = 'aloza.timbal@gmail.com';
+
+SELECT 'Setup completo' as status;

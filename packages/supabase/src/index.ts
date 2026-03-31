@@ -12,7 +12,7 @@ export const TABLES = {
   NEWS: "news",
   STORE_ITEMS: "store_items",
   EVENTS: "events",
-  PROFILES: "profiles",
+  USERS: "users",
   PERMISSIONS: "permissions",
 } as const;
 
@@ -71,11 +71,19 @@ const restHeaders = () => ({
   ...authHeaders(),
 });
 
+const functionsHeaders = () => ({
+  apikey: supabaseAnonKey ?? "",
+  ...authHeaders(),
+  "Content-Type": "application/json",
+});
+
 class SelectBuilder {
   private table: string;
   private columns: string;
   private filters: Array<[string, string]> = [];
   private orderBy: string | null = null;
+  private limitCount: number | null = null;
+  private offsetCount: number | null = null;
   constructor(table: string, columns: string) {
     this.table = table;
     this.columns = columns;
@@ -84,9 +92,32 @@ class SelectBuilder {
     this.filters.push([column, `eq.${encodeURIComponent(value)}`]);
     return this;
   }
+  ilike(column: string, pattern: string) {
+    this.filters.push([column, `ilike.${encodeURIComponent(pattern)}`]);
+    return this;
+  }
+  in(column: string, values: string[]) {
+    const list = values.map((v) => `"${String(v).replace(/"/g, '\\"')}"`).join(",");
+    this.filters.push([column, `in.(${list})`]);
+    return this;
+  }
+  contains(column: string, values: string[]) {
+    const list = values.map((v) => `"${String(v).replace(/"/g, '\\"')}"`).join(",");
+    this.filters.push([column, `cs.{${list}}`]);
+    return this;
+  }
   order(column: string, opts?: { ascending?: boolean }) {
     const dir = opts?.ascending === false ? "desc" : "asc";
     this.orderBy = `${column}.${dir}`;
+    return this;
+  }
+  limit(count: number) {
+    this.limitCount = count;
+    return this;
+  }
+  range(from: number, to: number) {
+    this.offsetCount = from;
+    this.limitCount = Math.max(0, to - from + 1);
     return this;
   }
   async maybeSingle() {
@@ -94,6 +125,8 @@ class SelectBuilder {
     url.searchParams.set("select", this.columns);
     for (const [k, v] of this.filters) url.searchParams.set(k, v);
     if (this.orderBy) url.searchParams.set("order", this.orderBy);
+    if (this.limitCount !== null) url.searchParams.set("limit", String(this.limitCount));
+    if (this.offsetCount !== null) url.searchParams.set("offset", String(this.offsetCount));
 
     const res = await fetch(`${url.toString()}`, {
       method: "GET",
@@ -115,7 +148,65 @@ class SelectBuilder {
       url.searchParams.set("select", this.columns);
       for (const [k, v] of this.filters) url.searchParams.set(k, v);
       if (this.orderBy) url.searchParams.set("order", this.orderBy);
+      if (this.limitCount !== null) url.searchParams.set("limit", String(this.limitCount));
+      if (this.offsetCount !== null) url.searchParams.set("offset", String(this.offsetCount));
       const out = await fetchJson<T[]>(url.toString(), { method: "GET", headers: { ...restHeaders() } });
+      return resolve(out);
+    } catch (e) {
+      if (reject) return reject(e);
+      throw e;
+    }
+  }
+}
+
+class InsertBuilder {
+  private table: string;
+  private payload: unknown;
+  constructor(table: string, payload: unknown) {
+    this.table = table;
+    this.payload = payload;
+  }
+  async then<T>(resolve: (value: ApiResult<T[]>) => unknown, reject?: (reason: unknown) => unknown) {
+    try {
+      const url = new URL(`${apiBase}/rest/v1/${this.table}`);
+      const out = await fetchJson<T[]>(url.toString(), {
+        method: "POST",
+        headers: {
+          ...restHeaders(),
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(this.payload),
+      });
+      return resolve(out);
+    } catch (e) {
+      if (reject) return reject(e);
+      throw e;
+    }
+  }
+}
+
+class DeleteBuilder {
+  private table: string;
+  private filters: Array<[string, string]> = [];
+  constructor(table: string) {
+    this.table = table;
+  }
+  eq(column: string, value: string) {
+    this.filters.push([column, `eq.${encodeURIComponent(value)}`]);
+    return this;
+  }
+  async then<T>(resolve: (value: ApiResult<T[]>) => unknown, reject?: (reason: unknown) => unknown) {
+    try {
+      const url = new URL(`${apiBase}/rest/v1/${this.table}`);
+      for (const [k, v] of this.filters) url.searchParams.set(k, v);
+      const out = await fetchJson<T[]>(url.toString(), {
+        method: "DELETE",
+        headers: {
+          ...restHeaders(),
+          Prefer: "return=representation",
+        },
+      });
       return resolve(out);
     } catch (e) {
       if (reject) return reject(e);
@@ -194,13 +285,30 @@ export const supabase = {
       return { data: { user }, error: null };
     },
   },
+  functions: {
+    async invoke<T>(name: string, body?: unknown): Promise<ApiResult<T>> {
+      if (!isSupabaseConfigured) return { data: null, error: { message: "Supabase no configurado" } };
+      const url = `${apiBase}/functions/v1/${name}`;
+      return await fetchJson<T>(url, {
+        method: "POST",
+        headers: { ...functionsHeaders() },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+    },
+  },
   from(table: string) {
     return {
       select(columns: string) {
         return new SelectBuilder(table, columns);
       },
+      insert(payload: unknown) {
+        return new InsertBuilder(table, payload);
+      },
       update(patch: Record<string, unknown>) {
         return new UpdateBuilder(table, patch);
+      },
+      delete() {
+        return new DeleteBuilder(table);
       },
     };
   },
@@ -213,7 +321,7 @@ export const getProfile = async (): Promise<Profile | null> => {
   if (!user) return null;
 
   const res = await supabase
-    .from(TABLES.PROFILES)
+    .from(TABLES.USERS)
     .select("id,email,full_name,role,created_at,updated_at")
     .eq("id", user.id)
     .maybeSingle();

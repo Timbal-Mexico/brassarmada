@@ -8,12 +8,14 @@ import BandLanding from "./pages/BandLanding.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import ArtistsPage from "./pages/Artists.tsx";
 import ArtistProfile from "./pages/ArtistProfile.tsx";
-import ArtistAdmin from "./pages/ArtistAdmin.tsx";
+import ArtistPanel from "./pages/ArtistPanel.tsx";
+import RequireWebAuth from "./components/RequireWebAuth.tsx";
 import NewsIndex from "./pages/NewsIndex.tsx";
 import NewsDetail from "./pages/NewsDetail.tsx";
 import ContactPage from "./pages/Contact.tsx";
 import StorePage from "./pages/Store.tsx";
 import ProjectsPage from "./pages/Projects.tsx";
+import Login from "./pages/Login.tsx";
 import LoginRedirect from "./pages/LoginRedirect.tsx";
 
 // New Pages (Placeholders for now)
@@ -34,9 +36,11 @@ const App = () => (
           <Route path="/proyectos" element={<ProjectsPage />} />
           <Route path="/artistas" element={<ArtistsPage />} />
           <Route path="/artistas/:slug" element={<ArtistProfile />} />
-          <Route path="/panel/artistas/:slug" element={<ArtistAdmin />} />
+          <Route path="/panel/perfil" element={<RequireWebAuth><ArtistPanel /></RequireWebAuth>} />
+          <Route path="/panel/artistas/:slug" element={<RequireWebAuth><ArtistPanel /></RequireWebAuth>} />
           <Route path="/tienda" element={<StorePage />} />
-          <Route path="/login" element={<LoginRedirect />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/admin" element={<LoginRedirect />} />
           <Route path="/contacto" element={<ContactPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

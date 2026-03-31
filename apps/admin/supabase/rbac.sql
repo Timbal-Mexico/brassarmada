@@ -5,6 +5,33 @@ begin
   if not exists (select 1 from pg_type where typname = 'role') then
     create type public.role as enum ('admin', 'editor', 'viewer');
   end if;
+  if exists (select 1 from pg_type where typname = 'role') and not exists (
+    select 1
+    from pg_enum e
+    join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'role'
+      and e.enumlabel = 'super_admin'
+  ) then
+    alter type public.role add value 'super_admin';
+  end if;
+  if exists (select 1 from pg_type where typname = 'role') and not exists (
+    select 1
+    from pg_enum e
+    join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'role'
+      and e.enumlabel = 'artista'
+  ) then
+    alter type public.role add value 'artista';
+  end if;
+  if exists (select 1 from pg_type where typname = 'role') and not exists (
+    select 1
+    from pg_enum e
+    join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'role'
+      and e.enumlabel = 'cliente'
+  ) then
+    alter type public.role add value 'cliente';
+  end if;
   if not exists (select 1 from pg_type where typname = 'permission_resource') then
     create type public.permission_resource as enum ('news', 'store', 'artists', 'bands');
   end if;
@@ -23,7 +50,24 @@ begin
 end;
 $$;
 
-create table if not exists public.profiles (
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'profiles'
+  ) and not exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'users'
+  ) then
+    alter table public.profiles rename to users;
+  end if;
+end $$;
+
+create table if not exists public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
   full_name text,
@@ -34,13 +78,18 @@ create table if not exists public.profiles (
 
 do $$
 begin
+  if exists (select 1 from pg_trigger where tgname = 'set_profiles_updated_at')
+     and not exists (select 1 from pg_trigger where tgname = 'set_users_updated_at') then
+    alter trigger set_profiles_updated_at on public.users rename to set_users_updated_at;
+  end if;
+
   if not exists (
     select 1
     from pg_trigger
-    where tgname = 'set_profiles_updated_at'
+    where tgname = 'set_users_updated_at'
   ) then
-    create trigger set_profiles_updated_at
-    before update on public.profiles
+    create trigger set_users_updated_at
+    before update on public.users
     for each row execute function public.set_updated_at();
   end if;
 end $$;
@@ -64,7 +113,7 @@ create table if not exists public.news (
   image_url text,
   status text not null default 'draft' check (status in ('draft', 'published')),
   published_at timestamptz,
-  created_by uuid references public.profiles(id) on delete set null,
+  created_by uuid references public.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -114,7 +163,7 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email, full_name, role)
+  insert into public.users (id, email, full_name, role)
   values (
     new.id,
     coalesce(new.email, ''),
@@ -147,18 +196,18 @@ begin
     select 1
     from information_schema.columns
     where table_schema = 'public'
-      and table_name = 'profiles'
+      and table_name = 'users'
       and column_name = 'role'
       and data_type = 'text'
   ) then
-    alter table public.profiles
+    alter table public.users
     alter column role drop default;
 
-    alter table public.profiles
+    alter table public.users
     alter column role type public.role
     using role::public.role;
 
-    alter table public.profiles
+    alter table public.users
     alter column role set default 'viewer'::public.role;
   end if;
 
@@ -208,7 +257,7 @@ language sql
 stable
 as $$
   select coalesce(
-    (select (p.role::text)::public.role from public.profiles p where p.id = auth.uid()),
+    (select (p.role::text)::public.role from public.users p where p.id = auth.uid()),
     'viewer'::public.role
   );
 $$;
@@ -218,7 +267,15 @@ returns boolean
 language sql
 stable
 as $$
-  select public.current_role() = 'admin'::public.role;
+  select public.current_role() in ('admin'::public.role, 'super_admin'::public.role);
+$$;
+
+create or replace function public.is_super_admin()
+returns boolean
+language sql
+stable
+as $$
+  select public.current_role() = 'super_admin'::public.role;
 $$;
 
 create or replace function public.has_permission(r public.permission_resource, a public.permission_action)
@@ -228,7 +285,7 @@ stable
 as $$
   select
     case
-      when public.current_role() = 'admin'::public.role then true
+      when public.current_role() in ('admin'::public.role, 'super_admin'::public.role) then true
       else exists (
         select 1 from public.permissions p
         where p.role = public.current_role()
@@ -257,27 +314,33 @@ values
   ('editor', 'bands', 'update')
 on conflict do nothing;
 
-alter table public.profiles enable row level security;
+alter table public.users enable row level security;
 alter table public.permissions enable row level security;
 
-create policy "profiles_select_own_or_admin"
-on public.profiles
+create policy "users_select_own_or_admin"
+on public.users
 for select
 to authenticated
 using (auth.uid() = id or public.is_admin());
 
-create policy "profiles_update_admin_only"
-on public.profiles
+create policy "users_update_admin_only"
+on public.users
 for update
 to authenticated
-using (public.is_admin())
-with check (public.is_admin());
+using (public.is_super_admin())
+with check (public.is_super_admin());
 
-create policy "profiles_insert_admin_only"
-on public.profiles
+create policy "users_insert_admin_only"
+on public.users
 for insert
 to authenticated
-with check (public.is_admin());
+with check (public.is_super_admin());
+
+create policy "users_delete_super_admin_only"
+on public.users
+for delete
+to authenticated
+using (public.is_super_admin());
 
 create policy "permissions_select_authenticated"
 on public.permissions
@@ -289,8 +352,8 @@ create policy "permissions_write_admin_only"
 on public.permissions
 for all
 to authenticated
-using (public.is_admin())
-with check (public.is_admin());
+using (public.is_super_admin())
+with check (public.is_super_admin());
 
 do $$
 begin

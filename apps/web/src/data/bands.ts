@@ -38,7 +38,7 @@ export const bands: Band[] = [
     genre: "Jazz / Funk / Latin",
     tagline: "Jazz contemporáneo, funk, ritmos latinos y alternativas electrónicas",
     description: "Músico y productor con sobresaliente trayectoria a la escena del jazz en México. Más de 20 años de trayectoria lo consolidan como trompetista, compositor y director musical. Frontman con estilo propio, energía que se mezcla con el jazz contemporáneo, funk, ritmos latinos y alternativas electrónicas.",
-    image: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=600&h=400&fit=crop",
+    image: "../images/bands/arturo-de-la-torre.jpg",
     gallery: [
       "https://images.unsplash.com/photo-1464375117522-1311dd6d4110?w=2000&auto=format&fit=crop",
       "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=2000&auto=format&fit=crop",
@@ -87,7 +87,7 @@ export const bands: Band[] = [
     genre: "Big Band / Jazz",
     tagline: "La majestuosidad del jazz orquestal",
     description: "Orquesta de jazz liderada por Arturo de la Torre, presentando arreglos sofisticados y una experiencia sonora envolvente ideal para grandes escenarios y eventos de gala.",
-    image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&h=400&fit=crop",
+    image: "../images/bands/arturo-de-la-torre-jazz-orchestra.png",
     gallery: [
       "https://images.unsplash.com/photo-1484766280341-87861644c80d?w=2000&auto=format&fit=crop",
       "https://images.unsplash.com/photo-1519682337058-a94d519337bc?w=2000&auto=format&fit=crop",
@@ -126,7 +126,7 @@ export const bands: Band[] = [
     genre: "Jazz Fusión",
     tagline: "Innovación sonora y creatividad",
     description: "Propuesta musical fresca y audaz que combina elementos del jazz con ritmos contemporáneos, creando una atmósfera única y sofisticada.",
-    image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&h=400&fit=crop",
+    image: "../images/bands/beloit.png",
     gallery: [
       "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=2000&auto=format&fit=crop",
       "https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?w=2000&auto=format&fit=crop",
@@ -187,7 +187,7 @@ export const bands: Band[] = [
     genre: "Fusión Regional",
     tagline: "Raíces mexicanas con espíritu rebelde",
     description: "Una propuesta que reinterpreta la música tradicional con una energía contagiosa y arreglos modernos.",
-    image: "https://images.unsplash.com/photo-1504704911898-68304a7d2571?w=600&h=400&fit=crop",
+    image: "../images/bands/ponzona-de-agave.png",
     gallery: [
       "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=2000&auto=format&fit=crop",
       "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=2000&auto=format&fit=crop",
@@ -215,7 +215,7 @@ export const bands: Band[] = [
     genre: "Vocal Jazz / Pop",
     tagline: "Elegancia y sentimiento en cada interpretación",
     description: "Voz privilegiada que transita con naturalidad entre el jazz, el pop y la balada, ideal para crear ambientes íntimos y emotivos.",
-    image: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=600&h=400&fit=crop",
+    image: "../images/bands/ana-de-armas.png",
     gallery: [
       "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=2000&auto=format&fit=crop",
       "https://images.unsplash.com/photo-1521337706264-a414f153a5f5?w=2000&auto=format&fit=crop",
@@ -243,7 +243,7 @@ export const bands: Band[] = [
     genre: "Jazz / Blues",
     tagline: "El alma del blues y la sofisticación del jazz",
     description: "Banda que captura la esencia de los clubes de jazz clásicos con un repertorio que va desde los estándares hasta composiciones originales.",
-    image: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=600&h=400&fit=crop",
+    image: "../images/bands/la-conzatti.png",
     gallery: [
       "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=2000&auto=format&fit=crop",
       "https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=2000&auto=format&fit=crop",

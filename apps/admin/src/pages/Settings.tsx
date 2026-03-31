@@ -9,7 +9,7 @@ const Settings = () => {
   const [fullName, setFullName] = useState("");
 
   const current = profile.data;
-  const isAdmin = current?.role === "admin";
+  const isAdmin = current?.role === "admin" || current?.role === "super_admin";
 
   useEffect(() => {
     if (current && fullName === "") setFullName(current.full_name ?? "");
@@ -17,7 +17,7 @@ const Settings = () => {
 
   const save = async () => {
     if (!current) return;
-    const res = await supabase.from("profiles").update({ full_name: fullName }).eq("id", current.id);
+    const res = await supabase.from("users").update({ full_name: fullName }).eq("id", current.id);
     if (res.error) {
       toast({ title: "No se pudo guardar", description: res.error.message });
       return;
@@ -59,7 +59,7 @@ const Settings = () => {
               </div>
             ) : null}
           </div>
-          <RoleGate roles={["admin"]}>
+          <RoleGate roles={["admin", "super_admin"]}>
             <button type="button" onClick={save} className="mt-6 h-11 w-full bg-primary text-primary-foreground">
               Guardar
             </button>

@@ -1,1 +1,1 @@
-export { usePermissions, RoleGate, PermissionGate } from "./permissions";
+export { usePermissions, RoleGate, RoleGuard, PermissionGate } from "./permissions";

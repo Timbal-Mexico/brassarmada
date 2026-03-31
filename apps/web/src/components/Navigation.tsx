@@ -116,7 +116,7 @@ const Navigation = () => {
           </button>
 
           <a
-            href="https://app.brassarmada.com.mx/login"
+            href="/login"
             aria-label="Login"
             className="hidden sm:flex h-9 w-9 items-center justify-center border border-black text-black transition-opacity hover:opacity-60"
           >
@@ -177,7 +177,7 @@ const Navigation = () => {
             </Link>
             <div className="mt-4 flex gap-2 px-4 pb-6">
               <a
-                href="https://app.brassarmada.com.mx/login"
+                href="/login"
                 className="flex h-10 flex-1 items-center justify-center border border-black text-xs tracking-[0.2em] uppercase hover:bg-black hover:text-white transition-colors"
               >
                 Login

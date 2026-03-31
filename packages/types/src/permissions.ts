@@ -1,4 +1,4 @@
-export type Role = "admin" | "editor" | "viewer";
+export type Role = "super_admin" | "admin" | "editor" | "viewer" | "artista" | "cliente";
 
 export type Resource = "news" | "store" | "artists" | "bands";
 
@@ -10,4 +10,3 @@ export type Permission = {
   resource: Resource;
   action: Action;
 };
-

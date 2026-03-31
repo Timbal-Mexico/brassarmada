@@ -15,6 +15,9 @@ const RequireAuth = ({ children }: { children: React.ReactNode }) => {
   if (!profile.data) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
+  if (profile.data.role === "cliente") {
+    return <Navigate to="/login" replace state={{ from: location.pathname, reason: "unauthorized" }} />;
+  }
   return <>{children}</>;
 };
 

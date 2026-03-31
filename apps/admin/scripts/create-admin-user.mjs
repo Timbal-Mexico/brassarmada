@@ -78,7 +78,7 @@ const createAuthUser = async () => {
 };
 
 const waitForProfile = async (userId) => {
-  const url = new URL(`${base}/rest/v1/profiles`);
+  const url = new URL(`${base}/rest/v1/users`);
   url.searchParams.set("select", "id,email,full_name,role");
   url.searchParams.set("id", `eq.${userId}`);
 
@@ -103,11 +103,11 @@ const waitForProfile = async (userId) => {
     await sleep(250);
   }
 
-  throw new Error("No se encontró profile para el usuario (trigger no corrió o RLS/config).");
+  throw new Error("No se encontró user para el usuario (trigger no corrió o RLS/config).");
 };
 
 const setAdminRole = async (userId) => {
-  const url = new URL(`${base}/rest/v1/profiles`);
+  const url = new URL(`${base}/rest/v1/users`);
   url.searchParams.set("id", `eq.${userId}`);
 
   await fetchJson(url.toString(), {
@@ -138,4 +138,3 @@ try {
   console.error("Error:", e?.message ?? e);
   process.exit(1);
 }
-

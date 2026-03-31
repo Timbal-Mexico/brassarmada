@@ -1,71 +1,25 @@
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
-import ContactForm from "@/components/ContactForm";
-import { bands } from "@/data/bands";
-import { getArtistBySlug } from "@/data/artists";
-import type { Artist } from "@/data/artists";
-import { Guitar, Drum, Mic2, Music } from "lucide-react";
-
-const levelLabel = (level: 1 | 2 | 3 | 4 | 5) => {
-  if (level === 1) return "BÁSICO";
-  if (level === 2) return "INTERMEDIO";
-  if (level === 3) return "AVANZADO";
-  if (level === 4) return "PRO";
-  return "EXPERTO";
-};
-
-const getBandName = (slug: string) => bands.find((b) => b.slug === slug)?.name ?? slug;
-
-const STATS_KEY = "brassarmada_artist_stats_v1";
-
-const bumpStat = (slug: string, key: "views" | "hireClicks") => {
-  if (typeof window === "undefined") return;
-  try {
-    const raw = window.localStorage.getItem(STATS_KEY);
-    const parsed = raw ? (JSON.parse(raw) as Record<string, { views?: number; hireClicks?: number }>) : {};
-    const current = parsed[slug] ?? {};
-    parsed[slug] = { ...current, [key]: (current[key] ?? 0) + 1 };
-    window.localStorage.setItem(STATS_KEY, JSON.stringify(parsed));
-  } catch {
-    return;
-  }
-};
+import { useArtistBySlug, useArtistWorks } from "@/lib/artistProfiles";
 
 const ArtistsProfile = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [showModal, setShowModal] = useState(false);
+  const artistQuery = useArtistBySlug(slug);
+  const worksQuery = useArtistWorks(artistQuery.data?.id);
+  const artist = artistQuery.data;
 
-  const artist = useMemo(() => (slug ? getArtistBySlug(slug) : undefined), [slug]);
-
-  useEffect(() => {
-    if (!artist) return;
-    bumpStat(artist.slug, "views");
-    document.title = `${artist.name} — Artista`;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute("content", artist.bio);
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) ogTitle.setAttribute("content", `${artist.name} — Artista`);
-    const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc) ogDesc.setAttribute("content", artist.bio);
-    const ogImage = document.querySelector('meta[property="og:image"]');
-    if (ogImage) ogImage.setAttribute("content", artist.image);
-  }, [artist]);
-
-  useEffect(() => {
-    if (!artist) return;
-    const q = searchParams.get("contratar");
-    if (q === "1") {
-      setShowModal(true);
-      setSearchParams((p) => {
-        const next = new URLSearchParams(p);
-        next.delete("contratar");
-        return next;
-      });
-    }
-  }, [artist, searchParams, setSearchParams]);
+  if (artistQuery.isLoading) {
+    return (
+      <div className="min-h-screen bg-background pt-16">
+        <Navigation />
+        <div className="mx-auto w-full max-w-5xl px-4 py-20 text-center">
+          <div className="font-body text-[10px] tracking-[0.2em] text-black uppercase">CARGANDO…</div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!artist) {
     return (
@@ -82,48 +36,6 @@ const ArtistsProfile = () => {
     );
   }
 
-  const defaultBandForForm = artist.bandSlugs[0] ?? "";
-  const bandOptions = artist.bandSlugs.map((s) => ({ slug: s, name: getBandName(s) }));
-  const contactPhone = artist.contact?.phone;
-  const contactEmail = artist.contact?.email;
-  const whatsappUrl = contactPhone
-    ? `https://wa.me/52${contactPhone}?text=${encodeURIComponent(
-        `Hola, me interesa contratar a ${artist.name}. ¿Podrían darme información?`,
-      )}`
-    : "";
-
-  const timeline = [...artist.timeline].sort((a, b) => a.year - b.year);
-
-  const statusBadge =
-    artist.availabilityStatus === "reservado"
-      ? "bg-black text-white"
-      : artist.availabilityStatus === "pendiente"
-        ? "bg-white text-black"
-        : "bg-white text-black";
-
-  const statusLabel = artist.availabilityStatus.toUpperCase();
-
-  const youtubeId = (url: string) => {
-    const patterns = [
-      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
-      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-      /(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    ];
-    for (const re of patterns) {
-      const m = url.match(re);
-      if (m?.[1]) return m[1];
-    }
-    return "";
-  };
-
-  const iconForInstrument = (name: string) => {
-    const n = name.toUpperCase();
-    if (n.includes("VOZ")) return <Mic2 className="h-5 w-5" strokeWidth={3} />;
-    if (n.includes("GUITARRA")) return <Guitar className="h-5 w-5" strokeWidth={3} />;
-    if (n.includes("BATER") || n.includes("DRUM")) return <Drum className="h-5 w-5" strokeWidth={3} />;
-    return <Music className="h-5 w-5" strokeWidth={3} />;
-  };
-
   return (
     <div className="min-h-screen bg-background pt-16">
       <Navigation />
@@ -134,82 +46,30 @@ const ArtistsProfile = () => {
             <div className="lg:col-span-5">
               <div className="border border-black bg-white">
                 <div className="aspect-square overflow-hidden bg-black">
-                  <img src={artist.image} alt={artist.name} className="h-full w-full object-cover grayscale" loading="eager" />
+                  <img
+                    src={artist.profile_image_url ?? "/placeholder.svg"}
+                    alt={artist.stage_name}
+                    className="h-full w-full object-cover"
+                    loading="eager"
+                  />
                 </div>
                 <div className="border-t border-black p-6">
                   <div className="flex items-start justify-between gap-4">
-                    <h1 className="font-heading text-3xl font-black tracking-tighter text-black md:text-5xl">{artist.name}</h1>
-                    <span className={`border border-black px-2 py-1 font-body text-[9px] tracking-[0.2em] uppercase ${statusBadge}`}>
-                      {statusLabel}
-                    </span>
+                    <h1 className="font-heading text-3xl font-black tracking-tighter text-black md:text-5xl">{artist.stage_name}</h1>
                   </div>
 
                   <div className="mt-4 font-body text-[10px] font-light tracking-[0.3em] text-black uppercase opacity-70">
-                    {artist.genre} · DEBUT {artist.debutYear}
+                    {artist.genre ?? ""}
                   </div>
 
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    {artist.bandSlugs.map((s) => (
-                      <Link
-                        key={s}
-                        to={`/bandas/${s}`}
-                        className="border border-black px-2 py-1 font-body text-[9px] tracking-[0.2em] text-black uppercase hover:bg-black hover:text-white transition-colors"
-                      >
-                        {getBandName(s)}
-                      </Link>
-                    ))}
-                  </div>
-
-                  <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        bumpStat(artist.slug, "hireClicks");
-                        setShowModal(true);
-                      }}
-                      className="h-11 border border-black bg-black px-4 font-heading text-[10px] font-black tracking-[0.2em] text-white hover:opacity-80"
-                    >
-                      CONTRATAR
-                    </button>
-                    <Link
-                      to="/contacto"
-                      className="flex h-11 items-center justify-center border border-black bg-white px-4 font-heading text-[10px] font-black tracking-[0.2em] text-black hover:bg-black hover:text-white transition-colors"
-                    >
-                      CONTACTO
-                    </Link>
-                  </div>
-
-                  {(contactPhone || contactEmail) ? (
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {contactPhone ? (
-                        <a
-                          href={whatsappUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex h-11 items-center justify-center border border-black bg-white px-4 font-heading text-[10px] font-black tracking-[0.2em] text-black hover:bg-black hover:text-white transition-colors"
-                        >
-                          WHATSAPP
-                        </a>
-                      ) : null}
-                      {contactEmail ? (
-                        <a
-                          href={`mailto:${contactEmail}?subject=${encodeURIComponent(`Contratación: ${artist.name}`)}`}
-                          className="flex h-11 items-center justify-center border border-black bg-white px-4 font-heading text-[10px] font-black tracking-[0.2em] text-black hover:bg-black hover:text-white transition-colors"
-                        >
-                          EMAIL
-                        </a>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {artist.cvUrl ? (
+                  {artist.website ? (
                     <a
-                      href={artist.cvUrl}
+                      href={artist.website}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-4 flex h-11 items-center justify-center border border-black bg-white px-4 font-heading text-[10px] font-black tracking-[0.2em] text-black hover:bg-black hover:text-white transition-colors"
+                      className="mt-8 flex h-11 items-center justify-center border border-black bg-black px-4 font-heading text-[10px] font-black tracking-[0.2em] text-white hover:opacity-80"
                     >
-                      DESCARGAR CV (PDF)
+                      WEBSITE
                     </a>
                   ) : null}
                 </div>
@@ -218,100 +78,20 @@ const ArtistsProfile = () => {
 
             <div className="lg:col-span-7">
               <div className="border border-black bg-white p-8">
-                <h2 className="font-heading text-xl font-black tracking-tight text-black">TRAYECTORIA</h2>
+                <h2 className="font-heading text-xl font-black tracking-tight text-black">BIO</h2>
                 <p className="mt-6 font-body text-sm font-light leading-relaxed tracking-widest text-black uppercase">
-                  {artist.bio}
+                  {artist.bio ?? ""}
                 </p>
 
-                <div className="mt-10 border-t border-black pt-10">
-                  <div className="font-heading text-[10px] font-black tracking-[0.3em] text-black uppercase">
-                    TIMELINE
-                  </div>
-                  <div className="mt-6 space-y-6">
-                    {timeline.map((item) => (
-                      <div key={`${item.year}-${item.title}`} className="border border-black p-6">
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="font-heading text-sm font-black tracking-tight text-black">{item.title}</div>
-                          <div className="font-body text-[10px] font-black tracking-[0.2em] text-black opacity-60">{item.year}</div>
-                        </div>
-                        <div className="mt-3 font-body text-[10px] font-light tracking-[0.2em] text-black uppercase opacity-70">
-                          {item.description}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-10 border-t border-black pt-10">
-                  <div className="font-heading text-[10px] font-black tracking-[0.3em] text-black uppercase">
-                    ESTILOS
-                  </div>
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    {artist.styles.map((style) => (
-                      <Link
-                        key={style}
-                        to={`/artistas?q=${encodeURIComponent(style)}`}
-                        className="border border-black px-2 py-1 font-body text-[9px] tracking-[0.2em] text-black uppercase hover:bg-black hover:text-white transition-colors"
-                      >
-                        {style}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-10 border-t border-black pt-10">
-                  <div className="font-heading text-[10px] font-black tracking-[0.3em] text-black uppercase">
-                    INSTRUMENTOS
-                  </div>
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                    {artist.instruments.map((inst) => (
-                      <div key={inst.name} className="flex items-center gap-3 border border-black p-6">
-                        <div className="flex h-9 w-9 items-center justify-center border border-black bg-white text-black">
-                          {iconForInstrument(inst.name)}
-                        </div>
-                        <div className="font-heading text-xs font-black tracking-[0.2em] text-black uppercase">{inst.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {artist.gallery?.length ? (
+                {worksQuery.data?.length ? (
                   <div className="mt-10 border-t border-black pt-10">
-                    <div className="font-heading text-[10px] font-black tracking-[0.3em] text-black uppercase">
-                      MULTIMEDIA
-                    </div>
+                    <div className="font-heading text-[10px] font-black tracking-[0.3em] text-black uppercase">OBRAS</div>
                     <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                      {artist.gallery.map((src) => (
-                        <div key={src} className="border border-black overflow-hidden bg-black">
-                          <img src={src} alt={artist.name} loading="lazy" className="h-full w-full object-cover grayscale" />
+                      {(worksQuery.data ?? []).map((w) => (
+                        <div key={w.id} className="border border-black overflow-hidden bg-black">
+                          <img src={w.image_url} alt={w.title} loading="lazy" className="h-full w-full object-cover" />
                         </div>
                       ))}
-                    </div>
-                  </div>
-                ) : null}
-                {artist.jams?.length ? (
-                  <div className="mt-10 border-t border-black pt-10">
-                    <div className="font-heading text-[10px] font-black tracking-[0.3em] text-black uppercase">MIS JAMS</div>
-                    <div className="mt-6 grid gap-6 sm:grid-cols-2">
-                      {artist.jams
-                        .map((url) => youtubeId(url))
-                        .filter((id) => !!id)
-                        .map((id) => (
-                          <div key={id} className="border border-black bg-black p-1">
-                            <div className="aspect-video">
-                              <iframe
-                                src={`https://www.youtube.com/embed/${id}`}
-                                width="100%"
-                                height="100%"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                                loading="lazy"
-                                title={`${artist.name} jam`}
-                                className="grayscale"
-                              />
-                            </div>
-                          </div>
-                        ))}
                     </div>
                   </div>
                 ) : null}
@@ -322,26 +102,6 @@ const ArtistsProfile = () => {
       </section>
 
       <Footer />
-
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md border border-black bg-white p-8">
-            <div className="mb-8 flex items-center justify-between">
-              <h3 className="font-heading text-[10px] font-black tracking-[0.2em] text-black uppercase">
-                CONTRATACIÓN / {artist.name}
-              </h3>
-              <button onClick={() => setShowModal(false)} className="text-black hover:opacity-50 transition-opacity" aria-label="Cerrar">
-                ✕
-              </button>
-            </div>
-            <ContactForm
-              preselectedBand={defaultBandForForm}
-              onSuccess={() => setTimeout(() => setShowModal(false), 2000)}
-              variant="modal"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };

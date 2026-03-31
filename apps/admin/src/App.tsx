@@ -15,6 +15,13 @@ import NotFound from "./pages/NotFound.tsx";
 import Login from "./pages/Login.tsx";
 import Users from "./pages/Users.tsx";
 import Settings from "./pages/Settings.tsx";
+import Artists from "./pages/Artists.tsx";
+import { RoleGuard } from "@brassarmada/ui";
+import ArtistDetail from "./pages/ArtistDetail.tsx";
+import ArtistContent from "./pages/artist/Content.tsx";
+import ArtistStats from "./pages/artist/Stats.tsx";
+import ArtistAudience from "./pages/artist/Audience.tsx";
+import ArtistMonetization from "./pages/artist/Monetization.tsx";
 
 const queryClient = new QueryClient();
 
@@ -33,7 +40,13 @@ const App = () => (
           <Route path="/earnings" element={<RequireAuth><Earnings /></RequireAuth>} />
           <Route path="/quotations" element={<RequireAuth><Quotations /></RequireAuth>} />
           <Route path="/messages" element={<RequireAuth><Messages /></RequireAuth>} />
-          <Route path="/users" element={<RequireAuth><Users /></RequireAuth>} />
+          <Route path="/artists" element={<RequireAuth><Artists /></RequireAuth>} />
+          <Route path="/artists/:slug" element={<RequireAuth><RoleGuard roles={["admin","super_admin"]}><ArtistDetail /></RoleGuard></RequireAuth>} />
+          <Route path="/artist/content" element={<RequireAuth><RoleGuard roles={["artista"]}><ArtistContent /></RoleGuard></RequireAuth>} />
+          <Route path="/artist/stats" element={<RequireAuth><RoleGuard roles={["artista"]}><ArtistStats /></RoleGuard></RequireAuth>} />
+          <Route path="/artist/audience" element={<RequireAuth><RoleGuard roles={["artista"]}><ArtistAudience /></RoleGuard></RequireAuth>} />
+          <Route path="/artist/monetization" element={<RequireAuth><RoleGuard roles={["artista"]}><ArtistMonetization /></RoleGuard></RequireAuth>} />
+          <Route path="/users" element={<RequireAuth><RoleGuard roles={["super_admin"]}><Users /></RoleGuard></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

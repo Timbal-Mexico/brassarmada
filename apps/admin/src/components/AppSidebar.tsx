@@ -2,10 +2,30 @@ import { Link, useLocation } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { ADMIN_NAV_ITEMS } from "./nav";
 import { usePermissions } from "@brassarmada/ui";
+import { useProfile, supabase } from "@brassarmada/supabase";
+import { useQuery } from "@tanstack/react-query";
+
+type SidebarArtistRow = { stage_name: string; slug: string; is_active: boolean };
 
 const AppSidebar = () => {
   const location = useLocation();
   const { role } = usePermissions();
+  const profile = useProfile();
+
+  const artistRow = useQuery<SidebarArtistRow | null>({
+    queryKey: ["sidebar-artist", profile.data?.id ?? null],
+    enabled: role === "artista" && !!profile.data?.id,
+    queryFn: async () => {
+      const res = await supabase
+        .from("artists")
+        .select("stage_name,slug,is_active")
+        .eq("user_id", profile.data?.id ?? "")
+        .maybeSingle();
+      if (res.error) return null;
+      return (res.data as SidebarArtistRow | null) ?? null;
+    },
+    staleTime: 30_000,
+  });
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 z-40 h-screen w-60 flex-col border-r border-border bg-sidebar">
@@ -18,8 +38,16 @@ const AppSidebar = () => {
 
       {/* Artist Info */}
       <div className="mx-4 mb-4 rounded-lg bg-muted/50 px-4 py-3">
-        <p className="text-sm font-semibold text-foreground">Artist Name</p>
-        <p className="text-xs text-muted-foreground">Pro Studio Member</p>
+        <p className="text-sm font-semibold text-foreground">
+          {profile.data?.full_name ?? profile.data?.email ?? "—"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {(role ?? "—").toUpperCase()}
+          {role === "artista" && artistRow.data ? ` · ${artistRow.data.is_active ? "ACTIVO" : "INACTIVO"}` : ""}
+        </p>
+        {role === "artista" && artistRow.data?.slug ? (
+          <p className="mt-1 text-[10px] tracking-[0.2em] text-muted-foreground uppercase">{artistRow.data.slug}</p>
+        ) : null}
       </div>
 
       {/* Navigation */}
